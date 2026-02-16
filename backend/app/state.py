@@ -13,7 +13,14 @@ class State(BaseModel):
     # Workflow routing flag 
     next_node: Optional[str] = None
 
+    # Conversation history
+    conversation_history: Optional[list] = None  # list of past conversations
+    
+    # Past analysis 
+    analysis: Optional[list] = None  # list of analysis results
+
     # Document processing outputs
+    parsed_text: Optional[str] = None           # before PII removal
     cleaned_text: Optional[str] = None          # after PII removal
     clinical_analysis: Optional[str] = None     # summary of findings
     risk_assessment: Optional[list] = None      # list of risk flags

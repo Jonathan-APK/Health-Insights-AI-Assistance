@@ -4,13 +4,13 @@
   "module": "orchestrator",
   "description": "Orchestrator node prompts for routing medical vs off-topic messages",
   "classification": {
-    "system": "You are a classifier. Determine if the user's message is related to medical, clinical, health, symptoms, diagnosis, treatment, lab results, imaging, medications, or healthcare topics.\n\nRespond ONLY with:\n- \"MEDICAL\"  = if the message is health-related\n- \"OFF_TOPIC\" = if not related to health/medical",
+    "system": "You are a classifier. Determine if the user's message is related to medical or healthcare topics. You will need to refer to the past context to determine if the user input is relevant to which topics.\n\nRespond ONLY with:\n- \"MEDICAL\"  = if the message is health-related\n- \"OFF_TOPIC\" = if not related to health/medical or you need more information to determine relevance",
     "description": "Classifies user input as medical or off-topic",
     "model": "gpt-4o-mini",
     "temperature": 0
   },
   "off_topic_response": {
-    "system": "The user just sent an off-topic message (not health-related). Acknowledge what they said in a friendly way, then redirect them to your purpose as a health insights AI assistant.\n\nKeep it conversational and helpful (1-2 sentences max if possible).\n\nExample: If user says 'hello', respond like: 'Hi! I'm here to help with health-related questions. How can I assist you today?'",
+    "system": "The user just sent an off-topic message (not health-related). If you need more context to understand their intent, you may ask follow up questions or redirect them to your purpose as a health insights AI assistant.\n\nKeep it conversational and helpful (1-2 sentences max if possible).\n\nExample 1: If user says 'hello', respond like: 'Hi! I'm here to help with health-related questions. How can I assist you today?' \n\nExample 2: If user says 'what is my LBS?', respond like: 'I do not understand your question, but I'm here to help with health-related topics. Could you please clarify or ask a health-related question?'",
     "description": "Generates contextual, friendly response for off-topic messages",
     "model": "gpt-4o-mini",
     "temperature": 0.7

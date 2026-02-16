@@ -17,6 +17,9 @@ def orchestrator_node(state):
     It uses an LLM to classify text-only messages as medical or off-topic.
     It returns a dict of updates (LangGraph merges them into State).
     """
+    print("=" * 50)
+    print("ORCHESTRATOR NODE")
+    print("=" * 50)
 
     has_text = bool(state.input_text)
     has_file = bool(state.file_meta)
@@ -25,6 +28,8 @@ def orchestrator_node(state):
     # TEXT ONLY = classify with LLM
     # -----------------------------
     if has_text and not has_file:
+        logger.info("Has Text Only")
+
         # Load classification prompt config from JSON
         version = settings.PROMPT_VERSIONS.get("orchestrator", settings.DEFAULT_PROMPT_VERSION)
         classification_config = load_prompt_config(
@@ -37,13 +42,15 @@ def orchestrator_node(state):
         model = classification_config["model"]
         temperature = classification_config["temperature"]
 
-        user_prompt = f"Message: {state.input_text}"
+        context = build_context(state)
+
+        logger.info("Orchestrator build context:\n %s", context)
 
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
         result = llm.invoke([
             SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt)
+            HumanMessage(content=context)
         ]).content.strip().upper()
 
         logger.info("Orchestrator classification result: %s", result)
@@ -67,14 +74,16 @@ def orchestrator_node(state):
             ]).content.strip()
             
             logger.info("Generated off-topic response: %s", contextual_response)
-            
+            print("=" * 50 +"\n")
+
             return {
                 "pre_compliance_response": contextual_response,
                 "next_node": "end",
                 "last_updated": now()
             }
-
+        
         # Medical = route to QnA
+        print("=" * 50 +"\n")
         return {
             "next_node": "qna",
             "last_updated": now()
@@ -84,6 +93,9 @@ def orchestrator_node(state):
     # FILE ONLY = document pipeline
     # -----------------------------
     if has_file and not has_text:
+        logger.info("Has File Only")
+
+        print("=" * 50 + "\n")
         return {
             "next_node": "doc_pipeline",
             "last_updated": now()
@@ -93,10 +105,15 @@ def orchestrator_node(state):
     # BOTH FILE + TEXT = doc pipeline first, then QnA
     # -----------------------------
     if has_file and has_text:
+        logger.info("Has File and Text")
+
+        print("=" * 50 +"\n")
         return {
             "next_node": "doc_then_qna",
             "last_updated": now()
         }
+
+    print("=" * 50 + "\n")
 
     # Fallback
     return {
@@ -104,3 +121,38 @@ def orchestrator_node(state):
         "pre_compliance_response": "No valid input provided.",
         "last_updated": now()
     }
+
+def build_context(state) -> str:
+    """
+    Build structured context for LLM classification.
+    Clear formatting helps LLM understand conversation flow and clinical context.
+    """
+    
+    context_parts = []
+    
+    # 1. Past conversation with turn numbers and clear role distinction
+    conversation = state.conversation_history
+    if conversation:
+        recent = conversation[-5:]
+        conv_text = []
+        for i, msg in enumerate(recent, 1):
+            conv_text.append(f"  Turn {i}:")
+            conv_text.append(f"    User: {msg['input_text_snippet']}")
+            conv_text.append(f"    Assistant: {msg['response_snippet']}")
+        context_parts.append("CONVERSATION HISTORY:\n" + "\n".join(conv_text))
+    
+    # 2. Past analysis with structured sections
+    analysis = state.analysis
+    if analysis:
+        latest = analysis[-1]
+        analysis_lines = [
+            f"PREVIOUS DOCUMENT ANALYSIS: {latest['filename']}",
+            f"  • Clinical Findings: {latest['clinical_analysis']}",
+            f"  • Risk Flags: {', '.join(latest['risk_assessment']) if latest['risk_assessment'] else 'None'}"
+        ]
+        context_parts.append("\n".join(analysis_lines))
+    
+    # 4. Current message (highlighted)
+    context_parts.append(f"NEW MESSAGE FROM USER:\n  \"{state.input_text}\"")
+    
+    return "\n\n".join(context_parts)

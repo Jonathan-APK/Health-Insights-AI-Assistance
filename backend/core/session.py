@@ -24,7 +24,7 @@ class SessionManager:
             "created_at": datetime.now(self.sgt).isoformat(),
             "last_active": datetime.now(self.sgt).isoformat(),
             "conversation_history": [],
-            "analysis": None,
+            "analysis": [],
             "upload_history": [],
             "has_active_analysis": False,
             "message_count": 0, 

@@ -1,3 +1,4 @@
+import json
 from langgraph.graph import StateGraph, START, END
 from fastapi import APIRouter, Header, Request, UploadFile, File, Form, HTTPException, Response
 from typing import Optional
@@ -7,6 +8,7 @@ from core.file_validators import FileValidator
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from agents.orchestrator import orchestrator
+from agents.document_processing.document_parser import document_parser_node
 import app.nodes as nodes
 import logging  
 
@@ -33,7 +35,7 @@ async def chat(
     current_session_id = session_data["session_id"]
     response.headers["X-Session-ID"] = current_session_id
     
-    logger.info("Session Data:", session_data)
+    logger.info(f"Session data:\n{json.dumps(session_data, indent=2)}")
 
     # Prepare state for graph
     file_meta = None
@@ -59,13 +61,17 @@ async def chat(
         session_id=current_session_id,
         input_text=message,
         file_meta=file_meta,
-        file_bytes=file_bytes
+        file_bytes=file_bytes,
+        conversation_history=session_data["conversation_history"] or [],
+        analysis=session_data["analysis"] or []
     )
 
     # Run LangGraph Orchestrator
     final_state = graph.invoke(initial_state)
 
-    logger.info("Response state from graph: %s", final_state)
+    # Remove file bytes from final state for logging and response
+    final_state.pop("file_bytes", None)
+    logger.info("Response state from graph:\n%s", json.dumps(final_state, indent=2, default=str))
 
     # Persist session metadata
     now = datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
@@ -85,12 +91,18 @@ async def chat(
 
     # Add clinical analysis metadata
     if final_state.get("clinical_analysis"):
-        session_data["analysis"] = {
-            "clinical_analysis": final_state.get("clinical_analysis"),
-            "risk_assessment": final_state.get("risk_assessment"),
-            "insight_summary": final_state.get("insight_summary"),
-            "last_analyzed_at": now
+
+        # Create analysis entry
+        anaylsis_entry = {
+            "filename": file_meta["filename"],
+            "uploaded_at": now,
+            
+            # Final outputs from pipeline
+            "clinical_analysis": final_state.get("clinical_analysis", ""),
+            "risk_assessment": final_state.get("risk_assessment", [])
         }
+
+        session_data["analysis"].append(anaylsis_entry)
         session_data["has_active_analysis"] = True
 
     # Add conversation history
@@ -100,7 +112,7 @@ async def chat(
         "response_snippet": (final_state.get("final_response") or "")[:400]
     })
 
-    logger.info("Final session state: %s", session_data)
+    logger.info(f"Final session state:\n{json.dumps(session_data, indent=2)}")
 
     await session_manager.save_session(current_session_id, session_data)
 
@@ -131,15 +143,16 @@ def build_graph():
     Build the orchestrator graph with 3 routing scenarios:
     
     1. Text only -> QnA → Compliance -> END
-    2. File only -> Document Parser -> Clinical -> Risk -> Insights -> Compliance -> END  
-    3. File + Text -> Document Parser -> Clinical -> Risk -> Insights -> QnA -> Compliance -> END
+    2. File only -> Document Parser -> PII Removal -> Clinical -> Risk -> Insights -> Compliance -> END  
+    3. File + Text -> Document Parser -> PII Removal -> Clinical -> Risk -> Insights -> QnA -> Compliance -> END
     """
     
     builder = StateGraph(State)
 
     # Add all nodes
     builder.add_node("orchestrator", orchestrator.orchestrator_node)
-    builder.add_node("document_parser", nodes.document_parser_node)
+    builder.add_node("document_parser", document_parser_node)
+    builder.add_node("pii_removal", nodes.pii_removal_node)
     builder.add_node("clinical_analysis", nodes.clinical_analysis_node)
     builder.add_node("risk_assessment", nodes.risk_assessment_node)
     builder.add_node("insights_summary", nodes.insights_summary_node)
@@ -181,12 +194,35 @@ def build_graph():
     )   
     
     # ============================================
-    # Document pipeline path
+    # Conditional routing from Document Parser
     # ============================================
-    
-    builder.add_edge("document_parser", "clinical_analysis")
-    builder.add_edge("risk_assessment", "insights_summary")
-    
+    def route_from_document_parser(state: State) -> str:
+        """
+        Determine route after document parsing.
+        
+        Routes:
+        - No issue parsing document -> Go to PII Removal
+        - Issue -> END with error message
+        """
+        next_node = state.next_node
+        
+        if next_node == "pii_removal":
+            return "pii_removal"
+        else:
+            # Fallback - shouldn't happen
+            return "END"
+        
+    builder.add_conditional_edges(
+        "document_parser",
+        route_from_document_parser,
+        {
+            "pii_removal": "pii_removal",
+            "END": END
+        }
+    )  
+
+    builder.add_edge("pii_removal", "clinical_analysis")
+
     # ============================================
     # Conditional routing from clinical_analysis
     # ============================================
@@ -230,7 +266,7 @@ def build_graph():
         next_node = state.next_node
         
         # If user uploaded file + asked a question
-        if next_node == "doc_then_qna":
+        if next_node == "qna":
             return "qna"
         else:
             # File only - go straight to compliance
@@ -246,10 +282,15 @@ def build_graph():
     )
     
     # ============================================
+    # Risk Assessment always goes to Insights Summary
+    # ============================================
+    builder.add_edge("risk_assessment", "insights_summary")
+
+    # ============================================
     # QnA always goes to compliance
     # ============================================
     builder.add_edge("qna", "compliance")
-    
+
     # ============================================
     # Compliance is the final node before END
     # ============================================

@@ -3,41 +3,45 @@ import logging
 
 logger = logging.getLogger("nodes")
 
-def document_parser_node(state: State):
-    logger.info("Reached Document Parser Node: %s", state)
-
-    parsed_text = "Patient Name: John Doe\nFindings: Elevated cholesterol..."
-    # Immediately clean PII
-    state.cleaned_text = parsed_text.replace("John Doe", "[REDACTED]")
-    return state
-
 def clinical_analysis_node(state: State):
-    logger.info("Reached Clinical Analysis Node: %s", state)
+    logger.info("Reached Clinical Analysis Node")
 
-    state.clinical_analysis = "Summary: Elevated cholesterol, recommend lifestyle changes."
-    return state
+    return {
+            "clinical_analysis": "Summary: Elevated cholesterol, recommend lifestyle changes.",
+            "next_node": "medical_related"
+        }
 
 def risk_assessment_node(state: State):
-    logger.info("Reached Risk Assessment Node: %s", state)
+    logger.info("Reached Risk Assessment Node")
 
     state.risk_assessment = ["High cholesterol"]
     return state
 
 def insights_summary_node(state: State):
-    logger.info("Reached Insights Summary Node: %s", state)
+    logger.info("Reached Insights Summary Node")
 
     state.insight_summary = f"{state.clinical_analysis}; Risks: {', '.join(state.risk_assessment)}"
+    if state.input_text:
+        state.next_node = "qna"
+    else: 
+        state.next_node = "compliance"
     return state
 
 def qna_node(state: State):
-    logger.info("Reached QnA Node: %s", state)
+    logger.info("Reached QnA Node")
 
     state.qna_answer = f"QnA response..."
     state.pre_compliance_response = f"QnA response..."
     return state
 
+def pii_removal_node(state: State):
+    logger.info("Reached PII Removal Node")
+
+    state.cleaned_text = state.parsed_text
+    return state
+
 def compliance_node(state: State):
-    logger.info("Reached Compliance Node: %s", state)
+    logger.info("Reached Compliance Node")
 
     state.final_response = state.pre_compliance_response
     return state
