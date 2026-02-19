@@ -8,6 +8,7 @@ from core.file_validators import FileValidator
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from agents.orchestrator import orchestrator
+from agents.document_processing.clinical_analysis import clinical_analysis_node
 from agents.document_processing.document_parser import document_parser_node
 import app.nodes as nodes
 import logging  
@@ -119,8 +120,9 @@ async def chat(
     # -----------------------------
     # Return final response
     # -----------------------------
+    message_text = final_state.get("final_response") or "No response generated."
     return ChatResponse(
-        message=final_state.get("final_response"),
+        message=message_text,
         has_active_analysis=bool(final_state.get("analysis_state"))
     )
 
@@ -153,7 +155,7 @@ def build_graph():
     builder.add_node("orchestrator", orchestrator.orchestrator_node)
     builder.add_node("document_parser", document_parser_node)
     builder.add_node("pii_removal", nodes.pii_removal_node)
-    builder.add_node("clinical_analysis", nodes.clinical_analysis_node)
+    builder.add_node("clinical_analysis", clinical_analysis_node)
     builder.add_node("risk_assessment", nodes.risk_assessment_node)
     builder.add_node("insights_summary", nodes.insights_summary_node)
     builder.add_node("qna", nodes.qna_node)
@@ -232,14 +234,17 @@ def build_graph():
         
         Routes:
         - if medical related -> route to risk_assessment
-        - if not medical related -> route to compliance (skip risk assessment)
+        - if not medical related + No input text -> route to compliance (skip risk assessment)
+        - if not medical related + Has input text -> route to QnA (skip risk assessment)
         """
         next_node = state.next_node
         
-        if next_node == "medical_related":
+        if next_node == "risk_assessment":
             return "risk_assessment"
-        elif next_node == "off-topic":
+        elif next_node == "compliance":
             return "compliance"
+        elif next_node == "qna":
+            return "qna"
         else:
             # Fallback - shouldn't happen
             return "compliance"
@@ -250,7 +255,8 @@ def build_graph():
         route_from_clinical_analysis,
         {
             "risk_assessment": "risk_assessment",
-            "compliance": "compliance"
+            "compliance": "compliance",
+            "qna": "qna"
         }
     )
 

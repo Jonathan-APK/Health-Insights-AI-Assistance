@@ -38,15 +38,16 @@ def document_parser_node(state):
         pdf_stream = BytesIO(file_bytes)
         doc = pymupdf.open(stream=pdf_stream, filetype="pdf")
         markdown_text = pymupdf4llm.to_markdown(doc)
-        logger.info(f"Extracted: {len(markdown_text)} chars")
+        safe_text = f"<UNTRUSTED_DATA>\n{markdown_text}\n</UNTRUSTED_DATA>"
+        logger.info(f"Extracted: {len(safe_text)} chars")
                 
         # Route to PII Removal Agent
-        logger.info(f"Parsed Content: {markdown_text}")
+        logger.info(f"Parsed Content: {safe_text[:200]}...")  # Log first 200 chars
         logger.info("Parsed document, routing to PII removal")
-        logger.info("=" * 50 + "\n")
+        print("=" * 50 + "\n")
            
         return {
-            "parsed_text": markdown_text,
+            "parsed_text": safe_text,
             "next_node": "pii_removal",
             "last_updated": now()
         }
@@ -55,7 +56,7 @@ def document_parser_node(state):
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
         logger.error(f"Error Encountered: {short_msg}")
-        logger.info("=" * 50 + "\n")
+        print("=" * 50 + "\n")
         return {
             "next_node": "end",
             "final_response": f"An error occurred while processing the document: {str(e)}",

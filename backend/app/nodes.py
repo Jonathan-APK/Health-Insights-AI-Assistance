@@ -3,14 +3,6 @@ import logging
 
 logger = logging.getLogger("nodes")
 
-def clinical_analysis_node(state: State):
-    logger.info("Reached Clinical Analysis Node")
-
-    return {
-            "clinical_analysis": "Summary: Elevated cholesterol, recommend lifestyle changes.",
-            "next_node": "medical_related"
-        }
-
 def risk_assessment_node(state: State):
     logger.info("Reached Risk Assessment Node")
 
@@ -29,7 +21,7 @@ def insights_summary_node(state: State):
 
 def qna_node(state: State):
     logger.info("Reached QnA Node")
-
+    # Past context + insight summary + input question 
     state.qna_answer = f"QnA response..."
     state.pre_compliance_response = f"QnA response..."
     return state
