@@ -58,7 +58,7 @@ def document_parser_node(state):
         logger.error(f"Error Encountered: {short_msg}")
         print("=" * 50 + "\n")
         return {
-            "next_node": "end",
+            "next_node": "compliance",
             "final_response": f"An error occurred while processing the document: {str(e)}",
             "last_updated": now()
         }

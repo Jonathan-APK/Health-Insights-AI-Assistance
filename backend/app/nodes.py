@@ -9,16 +9,6 @@ def risk_assessment_node(state: State):
     state.risk_assessment = ["High cholesterol"]
     return state
 
-def insights_summary_node(state: State):
-    logger.info("Reached Insights Summary Node")
-
-    state.insight_summary = f"{state.clinical_analysis}; Risks: {', '.join(state.risk_assessment)}"
-    if state.input_text:
-        state.next_node = "qna"
-    else: 
-        state.next_node = "compliance"
-    return state
-
 def qna_node(state: State):
     logger.info("Reached QnA Node")
     # Past context + insight summary + input question 
@@ -34,6 +24,8 @@ def pii_removal_node(state: State):
 
 def compliance_node(state: State):
     logger.info("Reached Compliance Node")
-
-    state.final_response = state.pre_compliance_response
-    return state
+    if state.final_response:
+        return state
+    else:
+        state.final_response = state.pre_compliance_response
+        return state

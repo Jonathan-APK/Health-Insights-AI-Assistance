@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from agents.orchestrator import orchestrator
 from agents.document_processing.clinical_analysis import clinical_analysis_node
 from agents.document_processing.document_parser import document_parser_node
+from agents.document_processing.insight_summary import insight_summary_node
 import app.nodes as nodes
 import logging  
 
@@ -157,7 +158,7 @@ def build_graph():
     builder.add_node("pii_removal", nodes.pii_removal_node)
     builder.add_node("clinical_analysis", clinical_analysis_node)
     builder.add_node("risk_assessment", nodes.risk_assessment_node)
-    builder.add_node("insights_summary", nodes.insights_summary_node)
+    builder.add_node("insights_summary", insight_summary_node)
     builder.add_node("qna", nodes.qna_node)
     builder.add_node("compliance", nodes.compliance_node)
 
@@ -212,14 +213,14 @@ def build_graph():
             return "pii_removal"
         else:
             # Fallback - shouldn't happen
-            return "END"
+            return "compliance"
         
     builder.add_conditional_edges(
         "document_parser",
         route_from_document_parser,
         {
             "pii_removal": "pii_removal",
-            "END": END
+            "compliance": "compliance"
         }
     )  
 
@@ -261,7 +262,8 @@ def build_graph():
     )
 
     # ============================================
-    # After insights: Check if we need QnA
+    # Conditional routing from Insight Summary
+    # Check if we need QnA agent to answer user question based on analysis, or if we can skip straight to compliance.
     # ============================================
     def route_after_insights(state: State) -> str:
         """

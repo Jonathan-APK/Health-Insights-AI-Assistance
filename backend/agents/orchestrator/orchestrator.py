@@ -118,7 +118,7 @@ def orchestrator_node(state):
 
     # Fallback
     return {
-        "next_node": "end",
-        "pre_compliance_response": "No valid input provided.",
+        "next_node": "compliance",
+        "final_response": "No valid input provided.",
         "last_updated": now()
     }

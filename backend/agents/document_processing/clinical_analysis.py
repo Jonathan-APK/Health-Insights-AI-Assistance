@@ -55,13 +55,11 @@ def clinical_analysis_node(state):
                 "clinical_analysis": "The document does not appear to be health-related.",
                 "insight_summary": "The document does not appear to be health-related.",
                 "next_node": "compliance",
-                "pre_compliance_response": "Document uploaded is not health-related. Please provide health-related input for analysis.",
+                "final_response": "Document uploaded is not health-related. Please provide health-related input for analysis.",
                 "last_updated": now()
             }
         else:
-            # For simplicity, we return a dummy analysis here.
-            # In a real implementation, you'd parse the LLM's response for insights.
-            logger.info("Document classified as ON_TOPIC. Proceeding with analysis.")
+            logger.info("Document classified as medical/health related. Proceeding with analysis.")
             return {
                 "clinical_analysis": result,
                 "next_node": "risk_assessment",
