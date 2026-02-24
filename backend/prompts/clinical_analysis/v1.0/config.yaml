@@ -1,0 +1,9 @@
+version: "1.0"
+created_at: "2026-02-13"
+module: "clinical_analysis"
+description: "Clinical analysis node prompts for processing medical reports"
+
+analysis:
+  description: "Analyzes parsed document. If off-topic or non-medical, respond with OFF_TOPIC."
+  model: "gpt-4o-mini"
+  temperature: 0.2

@@ -1,0 +1,9 @@
+version: "1.0"
+created_at: "2026-02-23"
+module: "insight_summary"
+description: "Insight summary node prompts for generating insights from parsed medical documents."
+
+summarize:
+  description: "Analyzes parsed document and generates a clear, concise summary of health insights, explaining key findings and their implications in simple language without providing medical advice."
+  model: "gpt-4o-mini"
+  temperature: 0.2

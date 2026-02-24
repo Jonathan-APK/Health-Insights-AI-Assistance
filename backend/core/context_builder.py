@@ -1,7 +1,6 @@
 def build_context(state) -> str:
     """
-    Build structured context for LLM classification.
-    Clear formatting helps LLM understand conversation flow and clinical context.
+    Build structured context for LLM using past conversation history, anaylsis, and current input.
     """
     
     context_parts = []

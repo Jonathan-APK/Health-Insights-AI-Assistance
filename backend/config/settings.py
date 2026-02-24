@@ -13,6 +13,7 @@ class Settings(BaseSettings):
         "risk_assessment": "v1.0",
         "qna": "v1.0",
         "compliance": "v1.0",
+        "insight_summary": "v1.0"
     }
     
     # Default version if module not in PROMPT_VERSIONS
