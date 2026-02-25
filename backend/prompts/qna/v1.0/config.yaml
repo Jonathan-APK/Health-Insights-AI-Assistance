@@ -1,0 +1,9 @@
+version: "1.0"
+created_at: "2026-02-13"
+module: "qna"
+description: "Q&A agent prompts for handling user questions related to medical or health-related topics, including the file they uploaded."
+
+qna:
+  description: "Provide a clear, simple explanation to the user's questions related to medical or health-related topics, including the file they uploaded, and previous conversation."
+  model: "gpt-4o-mini"
+  temperature: 0.2

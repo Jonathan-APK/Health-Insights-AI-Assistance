@@ -5,28 +5,29 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from core.prompt_loader import load_prompt_config
 from config.settings import settings
+from core.context_builder import build_context
 import logging
 
-logger = logging.getLogger("insight_summary")
+logger = logging.getLogger("Q&A Agent")
 
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
 
-def insight_summary_node(state):
+def qna_node(state):
     """
-    Generate insight summary from report text using LLM.
+    Health and Medical Q&A Assistant
     """
 
     print("=" * 50)
-    print("INSIGHT SUMMARY NODE")
+    print("Q&A NODE")
     print("=" * 50)
 
     try:
         # Load prompt config from JSON
-        version = settings.PROMPT_VERSIONS.get("insight_summary", settings.DEFAULT_PROMPT_VERSION)
+        version = settings.PROMPT_VERSIONS.get("qna", settings.DEFAULT_PROMPT_VERSION)
         analysis_config = load_prompt_config(
-            module="insight_summary",
-            key="summarize",
+            module="qna",
+            key="qna",
             version=version
         )
 
@@ -34,35 +35,27 @@ def insight_summary_node(state):
         model = analysis_config["model"]
         temperature = analysis_config["temperature"]
  
-        # Combine both Clinical Analysis and Risk Assessment fields
-        combined_content = f"""Clinical Analysis:
-        {state.clinical_analysis}
+        context = ""
 
-        Risk Assessment:
-        {state.risk_assessment}"""
+        if state.insight_summary:
+            context += f"\n\nDOCUMENT INSIGHT SUMMARY\n{state.insight_summary}\n\n"
 
-        # Call LLM for classification with config from prompts.json
+        context += build_context(state)
+
+        logger.info(f"Context built for QnA Node: {context[:5000]}...")  # Log only the first 5000 chars of context
+
+        # Call LLM with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
         result = llm.invoke([
             SystemMessage(content=system_prompt),
-            HumanMessage(content=combined_content)
+            HumanMessage(content=context)
         ]).content.strip()
         
-        if state.input_text:
-            logger.info("User entered text, past to QnA agent for further processing.")
-            return {
-                "insight_summary": result,
-                "next_node": "qna",
-                "last_updated": now()
-            }
-        else:
-            logger.info("User only uploaded document with no additional input. Routing to Compliance agent for further processing.")
-            return {
-                "insight_summary": result,
+        return {
+                "qna_answer": result,
                 "pre_compliance_response": result,
-                "next_node": "compliance",
                 "last_updated": now()
-            }
+        }
 
     except Exception as e:
         msg = str(e)

@@ -54,6 +54,7 @@ def clinical_analysis_node(state):
             return {
                 "clinical_analysis": "The document does not appear to be health-related.",
                 "insight_summary": "The document does not appear to be health-related.",
+                "pre_compliance_response": "The document does not appear to be health-related.",
                 "next_node": "compliance",
                 "final_response": "Document uploaded is not health-related. Please provide health-related input for analysis.",
                 "last_updated": now()

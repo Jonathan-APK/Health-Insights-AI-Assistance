@@ -9,13 +9,6 @@ def risk_assessment_node(state: State):
     state.risk_assessment = ["High cholesterol"]
     return state
 
-def qna_node(state: State):
-    logger.info("Reached QnA Node")
-    # Past context + insight summary + input question 
-    state.qna_answer = f"QnA response..."
-    state.pre_compliance_response = f"QnA response..."
-    return state
-
 def pii_removal_node(state: State):
     logger.info("Reached PII Removal Node")
 

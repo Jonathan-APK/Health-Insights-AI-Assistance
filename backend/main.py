@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
     # Build graph once
     app.state.graph = chat.build_graph()
-    logger.info(app.state.graph.get_graph().draw_ascii())
+    print(app.state.graph.get_graph().draw_ascii())
 
     yield  # <-- app running after startup
 

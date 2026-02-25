@@ -11,6 +11,7 @@ from agents.orchestrator import orchestrator
 from agents.document_processing.clinical_analysis import clinical_analysis_node
 from agents.document_processing.document_parser import document_parser_node
 from agents.document_processing.insight_summary import insight_summary_node
+from agents.qna.qna import qna_node
 import app.nodes as nodes
 import logging  
 
@@ -145,9 +146,10 @@ def build_graph():
     """
     Build the orchestrator graph with 3 routing scenarios:
     
-    1. Text only -> QnA → Compliance -> END
+    1. Input Text only -> QnA → Compliance -> END
     2. File only -> Document Parser -> PII Removal -> Clinical -> Risk -> Insights -> Compliance -> END  
-    3. File + Text -> Document Parser -> PII Removal -> Clinical -> Risk -> Insights -> QnA -> Compliance -> END
+    3. File + Input Text -> Document Parser -> PII Removal -> Clinical (Health/Medical Related) -> Risk -> Insights  -> QnA -> Compliance -> END
+    3. File + Input Text -> Document Parser -> PII Removal -> Clinical (Non-Health/Medical Related) -> QnA -> Compliance -> END
     """
     
     builder = StateGraph(State)
@@ -159,7 +161,7 @@ def build_graph():
     builder.add_node("clinical_analysis", clinical_analysis_node)
     builder.add_node("risk_assessment", nodes.risk_assessment_node)
     builder.add_node("insights_summary", insight_summary_node)
-    builder.add_node("qna", nodes.qna_node)
+    builder.add_node("qna", qna_node)
     builder.add_node("compliance", nodes.compliance_node)
 
     # Entry point
