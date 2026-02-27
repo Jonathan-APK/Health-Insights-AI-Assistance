@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from api.routes import chat, followup
+from api.routes import chat
 from core.session import SessionManager
 from redis.asyncio import Redis
 from dotenv import load_dotenv
@@ -61,7 +61,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(followup.router, prefix="/api", tags=["followup"])
 
 if __name__ == "__main__":
     import uvicorn
