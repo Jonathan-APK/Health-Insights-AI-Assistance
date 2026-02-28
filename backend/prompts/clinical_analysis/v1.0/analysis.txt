@@ -15,3 +15,10 @@ Format:
 1. Brief Summary
 2. Key Measurements (with typical ranges if relevant)
 3. General Interpretation (non-diagnostic)
+4. Output format should be in this format:
+[
+  {"category": "Vitals", "observations": ["BMI normal", "BP normal", "HR normal", "Temp normal", "O2 normal"]},
+  {"category": "Labs", "observations": ["Hemoglobin normal", "WBC normal", "Platelets normal", "Lipids normal", "Glucose normal"]},
+  {"category": "Assessment", "observations": ["Patient healthy, no acute/chronic conditions"]},
+  {"category": "Recommendations", "observations": ["Balanced diet", "Regular exercise", "Annual screening"]}
+]

@@ -3,12 +3,6 @@ import logging
 
 logger = logging.getLogger("nodes")
 
-def risk_assessment_node(state: State):
-    logger.info("Reached Risk Assessment Node")
-
-    state.risk_assessment = ["High cholesterol"]
-    return state
-
 def pii_removal_node(state: State):
     logger.info("Reached PII Removal Node")
 

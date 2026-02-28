@@ -1,0 +1,9 @@
+version: "1.0"
+created_at: "2026-02-28"
+module: "risk_assessment"
+description: "Risk assessment agent for evaluating medical or health-related risk for file upload"
+
+risk_assessment:
+  description: "Reviews medical records and generates a short, minimal summary of key health risks"
+  model: "gpt-4o-mini"
+  temperature: 0.2

@@ -10,7 +10,8 @@ from zoneinfo import ZoneInfo
 from agents.orchestrator import orchestrator
 from agents.document_processing.clinical_analysis import clinical_analysis_node
 from agents.document_processing.document_parser import document_parser_node
-from agents.document_processing.insight_summary import insight_summary_node
+from agents.document_processing.insights_summary import insights_summary_node
+from agents.document_processing.risk_assessment import risk_assessment_node
 from agents.qna.qna import qna_node
 import app.nodes as nodes
 import logging  
@@ -102,7 +103,7 @@ async def chat(
             
             # Final outputs from pipeline
             "clinical_analysis": final_state.get("clinical_analysis", ""),
-            "risk_assessment": final_state.get("risk_assessment", [])
+            "risk_assessment": final_state.get("risk_assessment", "")
         }
 
         session_data["analysis"].append(anaylsis_entry)
@@ -159,8 +160,8 @@ def build_graph():
     builder.add_node("document_parser", document_parser_node)
     builder.add_node("pii_removal", nodes.pii_removal_node)
     builder.add_node("clinical_analysis", clinical_analysis_node)
-    builder.add_node("risk_assessment", nodes.risk_assessment_node)
-    builder.add_node("insights_summary", insight_summary_node)
+    builder.add_node("risk_assessment", risk_assessment_node)
+    builder.add_node("insights_summary", insights_summary_node)
     builder.add_node("qna", qna_node)
     builder.add_node("compliance", nodes.compliance_node)
 

@@ -45,7 +45,7 @@ def clinical_analysis_node(state):
             logger.info("Document classified as OFF_TOPIC with user input. Routing to QnA node.")
             return {
                 "clinical_analysis": "The document does not appear to be health-related.",
-                "insight_summary": "The document does not appear to be health-related.",
+                "insights_summary": "The document does not appear to be health-related.",
                 "next_node": "qna",
                 "last_updated": now()
             }
@@ -53,7 +53,7 @@ def clinical_analysis_node(state):
             logger.info("Document classified as OFF_TOPIC with no user input. Routing to Compliance node.")
             return {
                 "clinical_analysis": "The document does not appear to be health-related.",
-                "insight_summary": "The document does not appear to be health-related.",
+                "insights_summary": "The document does not appear to be health-related.",
                 "pre_compliance_response": "The document does not appear to be health-related.",
                 "next_node": "compliance",
                 "final_response": "Document uploaded is not health-related. Please provide health-related input for analysis.",

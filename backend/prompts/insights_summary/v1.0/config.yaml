@@ -1,6 +1,6 @@
 version: "1.0"
 created_at: "2026-02-23"
-module: "insight_summary"
+module: "insights_summary"
 description: "Insight summary node prompts for generating insights from parsed medical documents."
 
 summarize:
