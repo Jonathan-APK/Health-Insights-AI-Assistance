@@ -21,7 +21,7 @@ class State(BaseModel):
 
     # Document processing outputs
     parsed_text: Optional[str] = None           # before PII removal
-    cleaned_text: Optional[str] = None          # after PII removal
+    sanitized_text: Optional[str] = None          # after PII removal
     clinical_analysis: Optional[str] = None    # summary of findings
     risk_assessment: Optional[str] = None      # list of risk flags
     insights_summary: Optional[str] = None       # consolidated insights

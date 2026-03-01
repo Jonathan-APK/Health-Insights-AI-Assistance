@@ -1,5 +1,3 @@
-# backend/agents/document_processing/document_parser.py
-
 import pymupdf4llm
 import pymupdf
 import logging
@@ -42,7 +40,6 @@ def document_parser_node(state):
         logger.info(f"Extracted: {len(safe_text)} chars")
                 
         # Route to PII Removal Agent
-        logger.info(f"Parsed Content: {safe_text[:200]}...")  # Log first 200 chars
         logger.info("Parsed document, routing to PII removal")
         print("=" * 50 + "\n")
            
@@ -59,6 +56,6 @@ def document_parser_node(state):
         print("=" * 50 + "\n")
         return {
             "next_node": "compliance",
-            "final_response": f"An error occurred while processing the document: {str(e)}",
+            "final_response": f"An error has occurred. Please try again later.",
             "last_updated": now()
         }

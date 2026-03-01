@@ -1,13 +1,7 @@
-from app.state import State
+from app.graph_state import State
 import logging
 
 logger = logging.getLogger("nodes")
-
-def pii_removal_node(state: State):
-    logger.info("Reached PII Removal Node")
-
-    state.cleaned_text = state.parsed_text
-    return state
 
 def compliance_node(state: State):
     logger.info("Reached Compliance Node")

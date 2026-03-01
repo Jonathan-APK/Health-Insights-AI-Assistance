@@ -1,5 +1,4 @@
 from datetime import datetime
-from multiprocessing import context
 from zoneinfo import ZoneInfo
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -64,6 +63,6 @@ def qna_node(state):
         print("=" * 50 + "\n")
         return {
             "next_node": "end",
-            "final_response": f"An error occurred while analyzing the document: {str(e)}",
+            "final_response": f"An error has occurred. Please try again later.",
             "last_updated": now()
         }

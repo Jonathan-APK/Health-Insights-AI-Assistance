@@ -12,6 +12,7 @@ uv add <package-name>
 3) Run:
 ```bash 
 uv sync
+uv run python -m spacy download en_core_web_lg
 uv run uvicorn main:app --reload --log-level debug
 ```
 4) Ensure local redis is running on port 6379

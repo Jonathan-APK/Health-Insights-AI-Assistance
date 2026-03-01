@@ -3,15 +3,16 @@ from langgraph.graph import StateGraph, START, END
 from fastapi import APIRouter, Header, Request, UploadFile, File, Form, HTTPException, Response
 from typing import Optional
 from api.models.responses import ChatResponse
-from app.state import State
+from app.graph_state import State
 from core.file_validators import FileValidator
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from agents.orchestrator import orchestrator
-from agents.document_processing.clinical_analysis import clinical_analysis_node
+from agents.document_processing.agent.clinical_analysis import clinical_analysis_node
 from agents.document_processing.document_parser import document_parser_node
-from agents.document_processing.insights_summary import insights_summary_node
-from agents.document_processing.risk_assessment import risk_assessment_node
+from agents.document_processing.agent.insights_summary import insights_summary_node
+from agents.document_processing.agent.risk_assessment import risk_assessment_node
+from agents.document_processing.pii_removal import pii_removal_node
 from agents.qna.qna import qna_node
 import app.nodes as nodes
 import logging  
@@ -73,8 +74,9 @@ async def chat(
     # Run LangGraph Orchestrator
     final_state = graph.invoke(initial_state)
 
-    # Remove file bytes from final state for logging and response
+    # Remove file bytes and parsed_text from final state for logging and response
     final_state.pop("file_bytes", None)
+    final_state.pop("parsed_text", None)
     logger.info("Response state from graph:\n%s", json.dumps(final_state, indent=2, default=str))
 
     # Persist session metadata
@@ -158,7 +160,7 @@ def build_graph():
     # Add all nodes
     builder.add_node("orchestrator", orchestrator.orchestrator_node)
     builder.add_node("document_parser", document_parser_node)
-    builder.add_node("pii_removal", nodes.pii_removal_node)
+    builder.add_node("pii_removal", pii_removal_node)
     builder.add_node("clinical_analysis", clinical_analysis_node)
     builder.add_node("risk_assessment", risk_assessment_node)
     builder.add_node("insights_summary", insights_summary_node)

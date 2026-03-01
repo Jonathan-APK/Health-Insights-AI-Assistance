@@ -54,6 +54,6 @@ def risk_assessment_node(state):
         print("=" * 50 + "\n")
         return {
             "next_node": "end",
-            "final_response": f"An error occurred while analyzing the document: {str(e)}",
+            "final_response": f"An error has occurred. Please try again later.",
             "last_updated": now()
         }
