@@ -79,7 +79,7 @@ def orchestrator_node(state):
 
             return {
                 "pre_compliance_response": contextual_response,
-                "next_node": "end",
+                "next_node": "compliance",
                 "last_updated": now()
             }
         
@@ -119,6 +119,6 @@ def orchestrator_node(state):
     # Fallback
     return {
         "next_node": "compliance",
-        "final_response": "No valid input provided.",
+        "final_response": "An error has occurred. Please try again later.",
         "last_updated": now()
     }

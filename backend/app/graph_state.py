@@ -32,6 +32,9 @@ class State(BaseModel):
     # Pre-compliance response (before compliance node processes it)
     pre_compliance_response: Optional[str] = None
 
+    # Compliance check result (stores the full JSON verdict object)
+    compliance_response: Optional[Dict[str, Any]] = None
+
     # Final response (after compliance check and any modifications)
     final_response: Optional[str] = None
 

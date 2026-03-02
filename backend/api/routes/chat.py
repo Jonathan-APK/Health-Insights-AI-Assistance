@@ -13,8 +13,8 @@ from agents.document_processing.document_parser import document_parser_node
 from agents.document_processing.agent.insights_summary import insights_summary_node
 from agents.document_processing.agent.risk_assessment import risk_assessment_node
 from agents.document_processing.pii_removal import pii_removal_node
+from agents.compliance.compliance import compliance_node
 from agents.qna.qna import qna_node
-import app.nodes as nodes
 import logging  
 
 logger = logging.getLogger("chat")
@@ -165,7 +165,7 @@ def build_graph():
     builder.add_node("risk_assessment", risk_assessment_node)
     builder.add_node("insights_summary", insights_summary_node)
     builder.add_node("qna", qna_node)
-    builder.add_node("compliance", nodes.compliance_node)
+    builder.add_node("compliance", compliance_node)
 
     # Entry point
     builder.add_edge(START, "orchestrator")
