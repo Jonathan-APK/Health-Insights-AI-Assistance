@@ -14,16 +14,29 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
+# Load application settings early; this reads from the environment (or
+# .env in local development).
+from config.settings import settings
+
 # Lifespan context manager
 async def lifespan(app: FastAPI):
     # Startup
 
-    # Setup Redis client and session manager
-    redis_client = Redis.from_url("redis://localhost:6379", decode_responses=True)
-    app.state.session_manager = SessionManager(redis_client)
-    
-    # Override, so it would use your local .env file
-    load_dotenv(override=True)  
+    # When running locally we still want to be able to drop a `.env` file
+    # next to main.py; pydantic-settings honors it automatically but the
+    # developers sometimes call `load_dotenv` for interactive shells, so
+    # keep the behaviour parity.
+    if not settings.is_production:
+        load_dotenv(override=True)
+
+    # make sure the OpenAI key is available to downstream libraries
+    import os
+
+    os.environ.setdefault("OPENAI_API_KEY", settings.OPENAI_API_KEY)
+
+    # Create a Redis client using whatever URL the environment provides.
+    redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
+    app.state.session_manager = SessionManager(redis_client, ttl=settings.SESSION_TTL_SECONDS)
 
     # Build graph once
     app.state.graph = chat.build_graph()
@@ -34,18 +47,25 @@ async def lifespan(app: FastAPI):
     # Shutdown
     await app.state.session_manager.redis.close()
 
-# Create FastAPI app
+# Create FastAPI app with production‑safe defaults.  Swagger/OpenAPI
+# endpoints and documentation are disabled when ``ENV=production`` so the
+# exposed attack surface is minimal.
 app = FastAPI(
     title="Health Insights AI",
     description="AI-powered medical document analysis and health Q&A",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
+    openapi_url=None if settings.is_production else "/openapi.json",
 )
 
 # CORS middleware (for frontend)
+origins = settings.FRONTEND_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_origins=origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -59,8 +79,13 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"error": "Internal Server Error", "details": str(exc)},
     )
 
-# Include routers
-app.include_router(chat.router, prefix="/api", tags=["chat"])
+# Include routers; every request to /v1/* will first run the
+# API‑key check and then the Redis‑based rate limiter.
+app.include_router(
+    chat.router,
+    prefix="/v1",
+    tags=["chat"],
+)
 
 if __name__ == "__main__":
     import uvicorn

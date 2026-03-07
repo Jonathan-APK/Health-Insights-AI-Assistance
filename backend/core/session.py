@@ -6,9 +6,11 @@ from zoneinfo import ZoneInfo
 from redis.asyncio import Redis
 
 class SessionManager:
-    def __init__(self, redis_client: Redis):
+    def __init__(self, redis_client: Redis, ttl: int = 1_800):
         self.redis = redis_client
-        self.ttl = 1800  # 30 minutes
+        # ttl is the expiry for each session entry (seconds); pulled from
+        # settings in ``main.py`` so tests can override easily.
+        self.ttl = ttl
         self.sgt = ZoneInfo("Asia/Singapore")
     
     async def get_or_create_session(self, session_id: Optional[str] = None) -> dict:

@@ -8,4 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
-.env*
+
+# environment files
+# ignore real .env files but we explicitly allow the example template
+.env
+!.env.example

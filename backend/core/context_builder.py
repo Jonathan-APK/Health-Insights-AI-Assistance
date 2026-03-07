@@ -22,7 +22,7 @@ def build_context(state) -> str:
         analysis_lines = [
             f"PREVIOUS DOCUMENT ANALYSIS: {latest.get('filename', '')}",
             f"  • Clinical Findings: {latest.get('clinical_analysis', '')}",
-            f"  • Risk Flags: {', '.join(latest.get('risk_assessment', [])) if latest.get('risk_assessment') else 'None'}"
+            f"  • Risk Flags: {latest.get('risk_assessment', []) if latest.get('risk_assessment') else 'None'}"
         ]
         context_parts.append("\n".join(analysis_lines))
     
