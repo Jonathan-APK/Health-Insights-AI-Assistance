@@ -128,7 +128,7 @@ async def chat(
     message_text = final_state.get("final_response") or "No response generated."
     return ChatResponse(
         message=message_text,
-        has_active_analysis=bool(final_state.get("analysis_state"))
+        has_active_analysis=bool(session_data["analysis"])
     )
 
 
