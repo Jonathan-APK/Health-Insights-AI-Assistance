@@ -18,15 +18,20 @@ uv add <package-name>
    FRONTEND_ORIGINS=http://localhost:3000
    ```
 2) Change directory to `/backend`.
-3) Run the usual commands:
+3a) Run the usual commands: (Locally without using dockers)
    ```bash
    uv sync               # keep uv.lock in sync
-   uv run python -m spacy download en_core_web_lg
+   uv run python -m spacy download en_core_web_md
    uv run uvicorn main:app --reload --log-level debug
    ```
-4) Ensure a Redis instance is available on the URL above (local
+- Ensure a Redis instance is available on the URL above (local
    default is `redis://localhost:6379`).
-5) Swagger UI will be visible at http://localhost:8000/docs when
+3b) Run using docker compose
+   ```bash
+   docker compose up          # ❌ uses old image, code changes not reflected
+   docker compose up --build  # ✅ rebuilds image first, picks up code changes
+   ```
+4) Swagger UI will be visible at http://localhost:8000/docs when
    `ENV` is **not** set to `production`.
 
 ### Configuration and deployment notes
