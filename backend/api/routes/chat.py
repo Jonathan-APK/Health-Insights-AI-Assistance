@@ -1,8 +1,8 @@
 import json
 from langgraph.graph import StateGraph, START, END
 from fastapi import APIRouter, Header, Request, UploadFile, File, Form, HTTPException, Response
+from fastapi.responses import StreamingResponse
 from typing import Optional
-from api.models.responses import ChatResponse
 from app.graph_state import State
 from core.file_validators import FileValidator
 from datetime import datetime
@@ -20,7 +20,22 @@ import logging
 logger = logging.getLogger("chat")
 router = APIRouter()
 
-@router.post("/chat", response_model=ChatResponse)
+NODE_STATUS_PUBLIC = {
+    "orchestrator": "Understanding your request...",
+    "document_parser": "We’re reading your document...",
+    "pii_removal": "Protecting your sensitive information...",
+    "clinical_analysis": "Analyzing your health information...",
+    "risk_assessment": "Looking for important health insights...",
+    "insights_summary": "Summarizing key findings...",
+    "qna": "Answering your question...",
+    "compliance": "Ensuring your data is safe and private..."
+}
+
+# Helper to format SSE messages
+def sse_event(data: dict) -> str:
+    return f"data: {json.dumps(data)}\n\n"
+
+@router.post("/chat")
 async def chat(
     request: Request,
     message: Optional[str] = Form(None, description="User's text message"),
@@ -28,7 +43,6 @@ async def chat(
     response: Response = None,
     x_session_id: Optional[str] = Header(None)
 ):
-    
     # Validate: must have either message or file
     validate_input(message, file)
     
@@ -71,66 +85,105 @@ async def chat(
         analysis=session_data["analysis"] or []
     )
 
-    # Run LangGraph Orchestrator
-    final_state = graph.invoke(initial_state)
+    # -------------------------------------------------------
+    # SSE Generator — streams node status + final response
+    # -------------------------------------------------------
+    async def pipeline_stream():
+        final_state = None
 
-    # Remove file bytes and parsed_text from final state for logging and response
-    final_state.pop("file_bytes", None)
-    final_state.pop("parsed_text", None)
-    logger.info("Response state from graph:\n%s", json.dumps(final_state, indent=2, default=str))
+        try:
+            async for event in graph.astream_events(initial_state, version="v2"):
+                event_type = event["event"]
+                node_name = event.get("name", "")
 
-    # Persist session metadata
-    now = datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+                # Node started
+                if event_type == "on_chain_start" and node_name in NODE_STATUS:
+                    msg = NODE_STATUS[node_name]
+                    logger.info(f"Node started: {node_name}")
+                    yield sse_event({"type": "status", "node": node_name, "message": msg})
 
-    session_data["last_active"] = now
-    session_data["message_count"] += 1 if message else 0
-    session_data["upload_count"] += 1 if file else 0
+                # Top-level chain done
+                if event_type == "on_chain_end" and node_name == "LangGraph":
+                    final_state = event["data"].get("output", {})
 
-    # Append upload history details if there was a file upload in this interaction
-    if file_meta:
-        session_data["upload_history"].append({
-            "filename": file_meta["filename"],
-            "content_type": file_meta["content_type"],
-            "size": file_meta["size"],
-            "created_at": now
+        except Exception as e:
+            logger.error(f"Pipeline error: {e}", exc_info=True)
+            yield sse_event({
+                "type": "error",
+                "message": "An error occurred while processing your request."
+            })
+            return
+
+        if not final_state:
+            yield sse_event({
+                "type": "error",
+                "message": "No response generated."
+            })
+            return
+        
+        # --------------------------------------------------
+        # Persist session after pipeline completes
+        # --------------------------------------------------
+        now = datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+
+        session_data["last_active"] = now
+        session_data["message_count"] += 1 if message else 0
+        session_data["upload_count"] += 1 if file else 0
+
+        if file_meta:
+            session_data["upload_history"].append({
+                "filename": file_meta["filename"],
+                "content_type": file_meta["content_type"],
+                "size": file_meta["size"],
+                "created_at": now
+            })
+
+        if final_state.get("clinical_analysis"):
+            analysis_entry = {
+                "filename": file_meta["filename"],
+                "uploaded_at": now,
+                "clinical_analysis": final_state.get("clinical_analysis", ""),
+                "risk_assessment": final_state.get("risk_assessment", "")
+            }
+            session_data["analysis"].append(analysis_entry)
+            session_data["has_active_analysis"] = True
+
+        session_data["conversation_history"].append({
+            "timestamp": now,
+            "input_text_snippet": (message or "")[:200],
+            "response_snippet": (final_state.get("final_response") or "")[:400]
         })
 
-    # Add clinical analysis metadata
-    if final_state.get("clinical_analysis"):
+        logger.info(f"Final session state:\n{json.dumps(session_data, indent=2)}")
+        await session_manager.save_session(current_session_id, session_data)
 
-        # Create analysis entry
-        anaylsis_entry = {
-            "filename": file_meta["filename"],
-            "uploaded_at": now,
-            
-            # Final outputs from pipeline
-            "clinical_analysis": final_state.get("clinical_analysis", ""),
-            "risk_assessment": final_state.get("risk_assessment", "")
+        # --------------------------------------------------
+        # Emit final response to client
+        # --------------------------------------------------
+        message_text = final_state.get("final_response") or "No response generated."
+
+        # Remove internal fields before logging
+        final_state.pop("file_bytes", None)
+        final_state.pop("parsed_text", None)
+        logger.info("Response state from graph:\n%s", json.dumps(final_state, indent=2, default=str))
+
+        yield sse_event({
+            "type": "complete",
+            "message": message_text,
+            "has_active_analysis": bool(session_data["analysis"])
+        })
+
+    # Set session ID header before streaming begins
+    return StreamingResponse(
+        pipeline_stream(),
+        media_type="text/event-stream",
+        headers={
+            "X-Session-ID": current_session_id,
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",      # Critical for Nginx — disables proxy buffering
+            "Connection": "keep-alive"
         }
-
-        session_data["analysis"].append(anaylsis_entry)
-        session_data["has_active_analysis"] = True
-
-    # Add conversation history
-    session_data["conversation_history"].append({
-        "timestamp": now,
-        "input_text_snippet": (message or "")[:200],
-        "response_snippet": (final_state.get("final_response") or "")[:400]
-    })
-
-    logger.info(f"Final session state:\n{json.dumps(session_data, indent=2)}")
-
-    await session_manager.save_session(current_session_id, session_data)
-
-    # -----------------------------
-    # Return final response
-    # -----------------------------
-    message_text = final_state.get("final_response") or "No response generated."
-    return ChatResponse(
-        message=message_text,
-        has_active_analysis=bool(session_data["analysis"])
     )
-
 
 @router.get("/health")
 async def health_check():

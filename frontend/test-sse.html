@@ -1,0 +1,130 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SSE Chat Test</title>
+
+<style>
+body {
+  font-family: Arial;
+  margin: 40px;
+}
+
+input, textarea {
+  width: 400px;
+  margin-bottom: 10px;
+}
+
+#log {
+  margin-top: 20px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  height: 300px;
+  width: 700px;
+  overflow-y: auto;
+  background: #f6f6f6;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+
+<body>
+
+<h2>SSE Chat Tester</h2>
+
+<div>
+<label>Session ID (optional)</label><br>
+<input id="sessionId" placeholder="x-session-id">
+</div>
+
+<div>
+<label>Message</label><br>
+<textarea id="message" rows="3"></textarea>
+</div>
+
+<div>
+<label>Upload File</label><br>
+<input type="file" id="file">
+</div>
+
+<br>
+<button onclick="send()">Send Request</button>
+
+<h3>Stream Output</h3>
+<div id="log"></div>
+
+<script>
+
+async function send() {
+
+  const log = document.getElementById("log")
+  log.textContent = ""
+
+  const form = new FormData()
+
+  const message = document.getElementById("message").value
+  const file = document.getElementById("file").files[0]
+  const sessionId = document.getElementById("sessionId").value
+
+  if (message) form.append("message", message)
+  if (file) form.append("file", file)
+
+  const headers = {
+    "Accept": "text/event-stream"
+  }
+
+  if (sessionId) headers["x-session-id"] = sessionId
+
+  const response = await fetch("http://localhost:8000/v1/chat", {
+    method: "POST",
+    headers: headers,
+    body: form
+  })
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+
+  let buffer = ""
+
+  while (true) {
+
+    const { value, done } = await reader.read()
+
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+
+    let parts = buffer.split("\n\n")
+
+    for (let i = 0; i < parts.length - 1; i++) {
+
+      const line = parts[i]
+
+      if (line.startsWith("data:")) {
+
+        const json = line.replace("data:", "").trim()
+
+        try {
+          const parsed = JSON.parse(json)
+          log.textContent += JSON.stringify(parsed, null, 2) + "\n\n"
+        } catch {
+          log.textContent += json + "\n"
+        }
+
+        log.scrollTop = log.scrollHeight
+      }
+
+    }
+
+    buffer = parts[parts.length - 1]
+
+  }
+
+}
+
+</script>
+
+</body>
+</html>
+```
