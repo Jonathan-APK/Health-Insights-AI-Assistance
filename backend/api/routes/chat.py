@@ -202,10 +202,11 @@ def build_graph():
     """
     Build the orchestrator graph with 3 routing scenarios:
     
-    1. Input Text only -> QnA → Compliance -> END
-    2. File only -> Document Parser -> PII Removal -> Clinical -> Risk -> Insights -> Compliance -> END  
-    3. File + Input Text -> Document Parser -> PII Removal -> Clinical (Health/Medical Related) -> Risk -> Insights  -> QnA -> Compliance -> END
-    3. File + Input Text -> Document Parser -> PII Removal -> Clinical (Non-Health/Medical Related) -> QnA -> Compliance -> END
+    1. Input Text only -> Router agent -> QnA agent  → Compliance agent  -> END
+    2a. File only -> Router agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> Compliance agent -> END  
+    2b. File only -> Router agent -> Document Parser service -> PII Removal service -> Clinical agent (Non-Health/Medical Related) -> QnA agent -> Compliance agent -> END
+    3a. File + Input Text -> Router agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> QnA agent -> Compliance agent -> END
+    3b. File + Input Text -> Router agent -> Document Parser service -> PII Removal service -> Clinical agent (Non-Health/Medical Related) -> QnA agent -> Compliance agent -> END
     """
     
     builder = StateGraph(State)
