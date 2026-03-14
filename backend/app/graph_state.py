@@ -6,9 +6,11 @@ from zoneinfo import ZoneInfo
 class State(BaseModel):
     # Core session info
     session_id: str
+    session_data: Optional[Dict[str, Any]] = None  # Store any session-specific data here
     input_text: Optional[str] = None
     file_meta: Optional[Dict[str, Any]] = None
     file_bytes: Optional[bytes] = None
+    file: Optional[Any] = None  # Store the UploadFile object for later use if needed
 
     # Workflow routing flag 
     next_node: Optional[str] = None
@@ -18,6 +20,10 @@ class State(BaseModel):
     
     # Past analysis 
     analysis: Optional[list] = None  # list of analysis results
+
+    #Input Guardrail
+    input_guardrail_passed: Optional[bool] = None
+    input_guardrail_block_reason: Optional[str] = None
 
     # Document processing outputs
     parsed_text: Optional[str] = None           # before PII removal

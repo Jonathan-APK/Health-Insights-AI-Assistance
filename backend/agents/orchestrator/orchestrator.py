@@ -18,9 +18,6 @@ def orchestrator_node(state):
     It uses an LLM to classify text-only messages as medical or off-topic.
     It returns a dict of updates (LangGraph merges them into State).
     """
-    print("=" * 50)
-    print("ORCHESTRATOR NODE")
-    print("=" * 50)
 
     has_text = bool(state.input_text)
     has_file = bool(state.file_meta)
@@ -96,7 +93,6 @@ def orchestrator_node(state):
     if has_file and not has_text:
         logger.info("Has File Only")
 
-        print("=" * 50 + "\n")
         return {
             "next_node": "doc_pipeline",
             "last_updated": now()
@@ -113,8 +109,6 @@ def orchestrator_node(state):
             "next_node": "doc_then_qna",
             "last_updated": now()
         }
-
-    print("=" * 50 + "\n")
 
     # Fallback
     return {

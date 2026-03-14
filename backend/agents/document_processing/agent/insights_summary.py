@@ -16,10 +16,6 @@ def insights_summary_node(state):
     Generate insight summary from report text using LLM.
     """
 
-    print("=" * 50)
-    print("INSIGHT SUMMARY NODE")
-    print("=" * 50)
-
     try:
         # Load prompt config from JSON
         version = settings.PROMPT_VERSIONS.get("insights_summary", settings.DEFAULT_PROMPT_VERSION)
@@ -67,7 +63,6 @@ def insights_summary_node(state):
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
         logger.error(f"Error Encountered: {short_msg}")
-        print("=" * 50 + "\n")
         return {
             "next_node": "end",
             "final_response": f"An error has occurred. Please try again later.",

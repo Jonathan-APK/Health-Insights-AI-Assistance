@@ -20,10 +20,6 @@ def compliance_node(state):
     Generate insight summary from report text using LLM.
     """
 
-    print("=" * 50)
-    print("COMPLIANCE NODE")
-    print("=" * 50)
-
     try:
         # Check if final_response already exists in state, if so return early to avoid redundant processing
         if state.final_response:

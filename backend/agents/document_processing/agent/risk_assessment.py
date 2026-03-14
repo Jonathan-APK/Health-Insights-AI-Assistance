@@ -16,10 +16,6 @@ def risk_assessment_node(state):
     Reviews medical records and generates a short, minimal summary of key health risks
     """
 
-    print("=" * 50)
-    print("RISK ASSESSMENT NODE")
-    print("=" * 50)
-
     try:
         # Load prompt config from JSON
         version = settings.PROMPT_VERSIONS.get("risk_assessment", settings.DEFAULT_PROMPT_VERSION)
@@ -50,7 +46,6 @@ def risk_assessment_node(state):
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
         logger.error(f"Error Encountered: {short_msg}")
-        print("=" * 50 + "\n")
         return {
             "next_node": "end",
             "final_response": f"An error has occurred. Please try again later.",

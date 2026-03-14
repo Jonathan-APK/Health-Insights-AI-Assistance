@@ -17,10 +17,6 @@ def qna_node(state):
     Health and Medical Q&A Assistant
     """
 
-    print("=" * 50)
-    print("Q&A NODE")
-    print("=" * 50)
-
     try:
         # Load prompt config from JSON
         version = settings.PROMPT_VERSIONS.get("qna", settings.DEFAULT_PROMPT_VERSION)
@@ -60,7 +56,6 @@ def qna_node(state):
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
         logger.error(f"Error Encountered: {short_msg}")
-        print("=" * 50 + "\n")
         return {
             "next_node": "end",
             "final_response": f"An error has occurred. Please try again later.",

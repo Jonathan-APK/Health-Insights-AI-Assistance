@@ -1,10 +1,9 @@
 import json
 from langgraph.graph import StateGraph, START, END
-from fastapi import APIRouter, Header, Request, UploadFile, File, Form, HTTPException, Response
+from fastapi import APIRouter, Header, Request, UploadFile, File, Form, Response
 from fastapi.responses import StreamingResponse
 from typing import Optional
 from app.graph_state import State
-from core.file_validators import FileValidator
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from agents.orchestrator import orchestrator
@@ -14,6 +13,7 @@ from agents.document_processing.agent.insights_summary import insights_summary_n
 from agents.document_processing.agent.risk_assessment import risk_assessment_node
 from agents.document_processing.pii_removal import pii_removal_node
 from agents.compliance.compliance import compliance_node
+from agents.guardrail.input_guardrail import input_guardrail_node
 from agents.qna.qna import qna_node
 import logging  
 
@@ -21,6 +21,7 @@ logger = logging.getLogger("chat")
 router = APIRouter()
 
 NODE_STATUS_PUBLIC = {
+    "input_guardrail": "Checking your request...",
     "orchestrator": "Understanding your request...",
     "document_parser": "We’re reading your document...",
     "pii_removal": "Protecting your sensitive information...",
@@ -28,7 +29,7 @@ NODE_STATUS_PUBLIC = {
     "risk_assessment": "Looking for important health insights...",
     "insights_summary": "Summarizing key findings...",
     "qna": "Answering your question...",
-    "compliance": "Ensuring your data is safe and private..."
+    "compliance": "Final check..."
 }
 
 # Helper to format SSE messages
@@ -42,10 +43,7 @@ async def chat(
     file: Optional[UploadFile] = File(None, description="Optional file upload"),
     response: Response = None,
     x_session_id: Optional[str] = Header(None)
-):
-    # Validate: must have either message or file
-    validate_input(message, file)
-    
+):  
     # Get managers from app state 
     session_manager = request.app.state.session_manager
 
@@ -56,31 +54,14 @@ async def chat(
     
     logger.info(f"Session data:\n{json.dumps(session_data, indent=2)}")
 
-    # Prepare state for graph
-    file_meta = None
-    file_bytes = None
-
-    if file:
-        # Validate file type
-        file_bytes = await file.read() 
-        is_valid, error = FileValidator.validate_file(file_bytes, file.filename) 
-        if not is_valid: 
-         raise HTTPException(status_code=400, detail=error)
-        
-        file_meta = {
-            "filename": file.filename,
-            "content_type": file.content_type,
-            "size": len(file_bytes)
-        }
-
     # Build graph once and store in app.state
     graph = request.app.state.graph
 
     initial_state = State(
         session_id=current_session_id,
+        session_data=session_data,
         input_text=message,
-        file_meta=file_meta,
-        file_bytes=file_bytes,
+        file=file,
         conversation_history=session_data["conversation_history"] or [],
         analysis=session_data["analysis"] or []
     )
@@ -97,13 +78,16 @@ async def chat(
                 node_name = event.get("name", "")
 
                 # Node started
-                if event_type == "on_chain_start" and node_name in NODE_STATUS:
-                    msg = NODE_STATUS[node_name]
-                    logger.info(f"Node started: {node_name}")
-                    yield sse_event({"type": "status", "node": node_name, "message": msg})
+                if event_type == "on_chain_start" and node_name in NODE_STATUS_PUBLIC:
+                    msg = NODE_STATUS_PUBLIC[node_name]
+                    logger.info(f"NODE STARTED: {node_name}")
+                    yield sse_event({"type": "status", "message": msg})
+
+                elif event_type == "on_chain_end" and node_name in NODE_STATUS_PUBLIC:
+                    logger.info(f"NODE COMPLETED: {node_name}")
 
                 # Top-level chain done
-                if event_type == "on_chain_end" and node_name == "LangGraph":
+                elif event_type == "on_chain_end" and node_name == "LangGraph":
                     final_state = event["data"].get("output", {})
 
         except Exception as e:
@@ -130,17 +114,17 @@ async def chat(
         session_data["message_count"] += 1 if message else 0
         session_data["upload_count"] += 1 if file else 0
 
-        if file_meta:
+        if final_state.get("file_meta"):
             session_data["upload_history"].append({
-                "filename": file_meta["filename"],
-                "content_type": file_meta["content_type"],
-                "size": file_meta["size"],
+                "filename": final_state.get("file_meta")["filename"],
+                "content_type": final_state.get("file_meta")["content_type"],
+                "size": final_state.get("file_meta")["size"],
                 "created_at": now
             })
 
         if final_state.get("clinical_analysis"):
             analysis_entry = {
-                "filename": file_meta["filename"],
+                "filename": final_state.get("file_meta")["filename"],
                 "uploaded_at": now,
                 "clinical_analysis": final_state.get("clinical_analysis", ""),
                 "risk_assessment": final_state.get("risk_assessment", "")
@@ -191,27 +175,21 @@ async def health_check():
     return {"status": "ok", "service": "Health Insights AI"}
 
 
-def validate_input(message: Optional[str], file: Optional[UploadFile]):
-    if not message and not file:
-        raise HTTPException(
-            status_code=400,
-            detail="Must provide either a message or a file"
-        )
-    
 def build_graph():
     """
     Build the orchestrator graph with 3 routing scenarios:
     
-    1. Input Text only -> Router agent -> QnA agent  → Compliance agent  -> END
-    2a. File only -> Router agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> Compliance agent -> END  
-    2b. File only -> Router agent -> Document Parser service -> PII Removal service -> Clinical agent (Non-Health/Medical Related) -> QnA agent -> Compliance agent -> END
-    3a. File + Input Text -> Router agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> QnA agent -> Compliance agent -> END
-    3b. File + Input Text -> Router agent -> Document Parser service -> PII Removal service -> Clinical agent (Non-Health/Medical Related) -> QnA agent -> Compliance agent -> END
+    1. Input Text only -> Input Guardrail -> Orchestrator agent -> QnA agent  → Compliance agent  -> END
+    2a. File only -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> Compliance agent -> END  
+    2b. File only -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Non-Health/Medical Related) -> QnA agent -> Compliance agent -> END
+    3a. File + Input Text -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> QnA agent -> Compliance agent -> END
+    3b. File + Input Text -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Non-Health/Medical Related) -> QnA agent -> Compliance agent -> END
     """
     
     builder = StateGraph(State)
 
     # Add all nodes
+    builder.add_node("input_guardrail", input_guardrail_node)
     builder.add_node("orchestrator", orchestrator.orchestrator_node)
     builder.add_node("document_parser", document_parser_node)
     builder.add_node("pii_removal", pii_removal_node)
@@ -222,7 +200,31 @@ def build_graph():
     builder.add_node("compliance", compliance_node)
 
     # Entry point
-    builder.add_edge(START, "orchestrator")
+    builder.add_edge(START, "input_guardrail")
+
+    # ============================================
+    # Conditional routing from input guardrail
+    # ============================================
+
+    def route_from_input_guardrail(state: State) -> str:
+        """
+        Perform checks on the input and determine next node.
+        """
+        next_node = state.next_node
+        
+        if next_node == "orchestrator":
+            return "orchestrator"
+        else:
+            return "END"
+        
+    builder.add_conditional_edges(
+        "input_guardrail",
+        route_from_input_guardrail,
+        {
+            "orchestrator": "orchestrator",
+            "END": END
+        }
+    )   
 
     # ============================================
     # Conditional routing from orchestrator

@@ -36,11 +36,7 @@ def pii_removal_node(state):
     """
     Remove PII from parsed text
     """
-    
-    print("=" * 50)
-    print("PII REMOVAL NODE")
-    print("=" * 50)
-    
+
     try:
         text_input = state.parsed_text
 
@@ -112,7 +108,6 @@ def pii_removal_node(state):
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
         logger.error(f"Error Encountered: {short_msg}")
-        print("=" * 50 + "\n")
         return {
             "sanitized_text": "An error occurred while processing the document.",
             "next_node": "compliance",

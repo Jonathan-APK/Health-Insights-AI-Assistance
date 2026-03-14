@@ -14,10 +14,7 @@ def document_parser_node(state):
     """
     Parse PDF
     """
-    
-    print("=" * 50)
-    print("DOCUMENT PARSER NODE")
-    print("=" * 50)
+
     
     file_bytes = state.file_bytes
     filename = state.file_meta.get("filename", "unknown.pdf") if state.file_meta else "unknown.pdf"
@@ -27,7 +24,8 @@ def document_parser_node(state):
         return {
             "next_node": "end",
             "final_response": "Error: No file content",
-            "last_updated": now()
+            "last_updated": now(),
+            "file_bytes": None    # clear file bytes after parsing
         }
     
     try:
@@ -41,21 +39,21 @@ def document_parser_node(state):
                 
         # Route to PII Removal Agent
         logger.info("Parsed document, routing to PII removal")
-        print("=" * 50 + "\n")
            
         return {
             "parsed_text": safe_text,
             "next_node": "pii_removal",
-            "last_updated": now()
+            "last_updated": now(),
+            "file_bytes": None    # clear file bytes after parsing
         }
         
     except Exception as e:
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
         logger.error(f"Error Encountered: {short_msg}")
-        print("=" * 50 + "\n")
         return {
             "next_node": "compliance",
             "final_response": f"An error has occurred. Please try again later.",
-            "last_updated": now()
+            "last_updated": now(),
+            "file_bytes": None    # clear file bytes after parsing
         }

@@ -16,10 +16,6 @@ def clinical_analysis_node(state):
     Send report text to LLM for clinical analysis.
     """
 
-    print("=" * 50)
-    print("CLINICAL ANALYSIS NODE")
-    print("=" * 50)
-
     try:
         # Load prompt config from JSON
         version = settings.PROMPT_VERSIONS.get("clinical_analysis", settings.DEFAULT_PROMPT_VERSION)
@@ -45,6 +41,7 @@ def clinical_analysis_node(state):
             return {
                 "clinical_analysis": "The document does not appear to be health-related.",
                 "insights_summary": "The document does not appear to be health-related.",
+                "sanitized_text": None, # Clear sanitized text as not required for QnA
                 "next_node": "qna",
                 "last_updated": now()
             }
@@ -54,6 +51,7 @@ def clinical_analysis_node(state):
                 "clinical_analysis": "The document does not appear to be health-related.",
                 "insights_summary": "The document does not appear to be health-related.",
                 "pre_compliance_response": "The document does not appear to be health-related.",
+                "sanitized_text": None, # Clear sanitized text as not required for compliance
                 "next_node": "compliance",
                 "final_response": "Document uploaded is not health-related. Please provide health-related input for analysis.",
                 "last_updated": now()
@@ -63,6 +61,7 @@ def clinical_analysis_node(state):
             return {
                 "clinical_analysis": result,
                 "next_node": "risk_assessment",
+                "sanitized_text": None, # Clear sanitized text as not required for risk_assessment
                 "last_updated": now()
             }
 
@@ -70,9 +69,9 @@ def clinical_analysis_node(state):
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
         logger.error(f"Error Encountered: {short_msg}")
-        print("=" * 50 + "\n")
         return {
             "next_node": "end",
+            "sanitized_text": None, # Clear sanitized text on error
             "final_response": f"An error has occurred. Please try again later.",
             "last_updated": now()
         }

@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     # prompt versioning (existing behaviour)
     # ---------------------------------------------------------------
     PROMPT_VERSIONS: Dict[str, str] = {
+        "input_guardrail": "v1.0",
         "orchestrator": "v1.0",
         "clinical_analysis": "v1.0",
         "risk_assessment": "v1.0",
@@ -55,5 +56,8 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
+    # Rate limit constants
+    MAX_MESSAGES_PER_SESSION: int = 50       # max messages per session lifetime
+    MAX_UPLOADS_PER_SESSION: int = 3         # max file uploads per session lifetime
 
 settings = Settings()
