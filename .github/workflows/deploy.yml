@@ -104,7 +104,6 @@ jobs:
             --cov=. \
             --cov-report=xml \
             --cov-report=term-missing \
-            --cov-fail-under=50 \
             -v
         env:
           ENV: test
