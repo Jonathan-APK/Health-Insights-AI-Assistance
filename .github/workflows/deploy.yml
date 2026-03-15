@@ -49,7 +49,7 @@ jobs:
         working-directory: ./backend
         run: |
           uv run bandit -r . \
-            -x ./tests,./.venv \
+            -x ./tests,./venv,./.venv,./env \
             --severity-level medium \
             -f json -o bandit-report.json
 
