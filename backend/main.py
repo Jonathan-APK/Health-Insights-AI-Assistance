@@ -38,7 +38,9 @@ async def lifespan(app: FastAPI):
 
     # Create a Redis client using whatever URL the environment provides.
     redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-    app.state.session_manager = SessionManager(redis_client, ttl=settings.SESSION_TTL_SECONDS)
+    app.state.session_manager = SessionManager(
+        redis_client, ttl=settings.SESSION_TTL_SECONDS
+    )
 
     # Build graph once
     app.state.graph = chat.build_graph()
@@ -48,6 +50,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     await app.state.session_manager.redis.close()
+
 
 # Create FastAPI app with production‑safe defaults.  Swagger/OpenAPI
 # endpoints and documentation are disabled when ``ENV=production`` so the
@@ -72,6 +75,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -80,6 +84,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": "Internal Server Error", "details": str(exc)},
     )
+
 
 # Include routers; every request to /v1/* will first run the
 # API‑key check and then the Redis‑based rate limiter.
@@ -91,4 +96,5 @@ app.include_router(
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

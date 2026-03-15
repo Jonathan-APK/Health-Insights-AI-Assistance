@@ -6,6 +6,7 @@ import yaml
 
 logger = logging.getLogger("prompt_loader")
 
+
 def load_prompt_config(module: str, key: str, version: str = "v1.0") -> Dict[str, Any]:
     """
     Load full prompt configuration including system, model, temperature, etc.
@@ -33,7 +34,7 @@ def load_prompt_config(module: str, key: str, version: str = "v1.0") -> Dict[str
 
     # Load config YAML
     try:
-        with open(config_file, 'r', encoding='utf-8') as f:
+        with open(config_file, "r", encoding="utf-8") as f:
             config_data = yaml.safe_load(f)
     except yaml.YAMLError as e:
         logger.error(f"Error parsing YAML file {config_file}: {e}")
@@ -62,7 +63,7 @@ def load_prompt_config(module: str, key: str, version: str = "v1.0") -> Dict[str
         )
 
     try:
-        with open(prompt_file, 'r', encoding='utf-8') as f:
+        with open(prompt_file, "r", encoding="utf-8") as f:
             config["system"] = f.read()
         logger.debug(f"Loaded prompt from {prompt_file}")
     except Exception as e:
@@ -75,9 +76,7 @@ def load_prompt_config(module: str, key: str, version: str = "v1.0") -> Dict[str
 
     # Validate that prompt is not empty
     if not config["system"] or not config["system"].strip():
-        raise ValueError(
-            f"Prompt file is empty: {prompt_file}"
-        )
+        raise ValueError(f"Prompt file is empty: {prompt_file}")
 
     # Add metadata for tracking
     config["_metadata"] = {
@@ -85,7 +84,7 @@ def load_prompt_config(module: str, key: str, version: str = "v1.0") -> Dict[str
         "key": key,
         "version": version,
         "prompt_file": str(prompt_file),
-        "config_file": str(config_file)
+        "config_file": str(config_file),
     }
 
     logger.info(f"Loaded prompt: {module}/{key} v{version}")

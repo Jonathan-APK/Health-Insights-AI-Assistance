@@ -32,7 +32,7 @@ class SessionManager:
             "upload_history": [],
             "has_active_analysis": False,
             "message_count": 0,
-            "upload_count": 0
+            "upload_count": 0,
         }
         await self.save_session(new_session_id, session_data)
         return session_data
@@ -44,11 +44,7 @@ class SessionManager:
         return None
 
     async def save_session(self, session_id: str, data: dict):
-        await self.redis.setex(
-            f"session:{session_id}",
-            self.ttl,
-            json.dumps(data)
-        )
+        await self.redis.setex(f"session:{session_id}", self.ttl, json.dumps(data))
 
     async def extend_session(self, session_id: str, session: dict):
         session["last_active"] = datetime.now(self.sgt).isoformat()

@@ -14,8 +14,10 @@ logger = logging.getLogger("compliance")
 BLOCK_FALLBACK_MESSAGE = "This output has been blocked due to compliance violations. Please contact your administrator."
 ERROR_FALLBACK_MESSAGE = "An error has occurred. Please try again later."
 
+
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+
 
 def compliance_node(state):
     """
@@ -25,18 +27,17 @@ def compliance_node(state):
     try:
         # Check if final_response already exists in state, if so return early to avoid redundant processing
         if state.final_response:
-            logger.info("Skip compliance check as final_response already exists in state.")
-            return {
-            "next_node": "END",
-            "last_updated": now()
-            }
+            logger.info(
+                "Skip compliance check as final_response already exists in state."
+            )
+            return {"next_node": "END", "last_updated": now()}
 
         # Load prompt config from JSON
-        version = settings.PROMPT_VERSIONS.get("compliance", settings.DEFAULT_PROMPT_VERSION)
+        version = settings.PROMPT_VERSIONS.get(
+            "compliance", settings.DEFAULT_PROMPT_VERSION
+        )
         analysis_config = load_prompt_config(
-            module="compliance",
-            key="compliance",
-            version=version
+            module="compliance", key="compliance", version=version
         )
 
         system_prompt = analysis_config["system"]
@@ -45,10 +46,12 @@ def compliance_node(state):
 
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=state.pre_compliance_response)
-        ]).content.strip()
+        result = llm.invoke(
+            [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=state.pre_compliance_response),
+            ]
+        ).content.strip()
 
         # Parse JSON response from LLM
         # Strip markdown code fences if present
@@ -56,7 +59,9 @@ def compliance_node(state):
         compliance_response = json.loads(clean_result)
 
         verdict = compliance_response.get("verdict", "block")
-        final_response = compliance_response.get("final_response", BLOCK_FALLBACK_MESSAGE)
+        final_response = compliance_response.get(
+            "final_response", BLOCK_FALLBACK_MESSAGE
+        )
 
         # Safety net: if verdict is block but LLM forgot to set a safe final_response
         if verdict == "block":
@@ -66,10 +71,10 @@ def compliance_node(state):
         logger.info(f"Reasons: {compliance_response.get('reasons', [])}")
 
         return {
-            "compliance_response": compliance_response,   # full JSON object
-            "final_response": final_response,             # extracted for easy access
+            "compliance_response": compliance_response,  # full JSON object
+            "final_response": final_response,  # extracted for easy access
             "next_node": "END",
-            "last_updated": now()
+            "last_updated": now(),
         }
 
     except json.JSONDecodeError as e:
@@ -79,11 +84,11 @@ def compliance_node(state):
                 "verdict": "block",
                 "reasons": ["Compliance agent returned malformed response."],
                 "sanitized_output": None,
-                "final_response": BLOCK_FALLBACK_MESSAGE
+                "final_response": BLOCK_FALLBACK_MESSAGE,
             },
             "final_response": BLOCK_FALLBACK_MESSAGE,
             "next_node": "END",
-            "last_updated": now()
+            "last_updated": now(),
         }
 
     except Exception as e:
@@ -93,11 +98,13 @@ def compliance_node(state):
         return {
             "compliance_response": {
                 "verdict": "block",
-                "reasons": [f"Compliance check failed due to an internal error: {short_msg}"],
+                "reasons": [
+                    f"Compliance check failed due to an internal error: {short_msg}"
+                ],
                 "sanitized_output": None,
-                "final_response": ERROR_FALLBACK_MESSAGE
+                "final_response": ERROR_FALLBACK_MESSAGE,
             },
             "final_response": ERROR_FALLBACK_MESSAGE,
             "next_node": "END",
-            "last_updated": now()
+            "last_updated": now(),
         }

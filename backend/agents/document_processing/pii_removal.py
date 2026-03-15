@@ -14,9 +14,7 @@ logger = logging.getLogger("document_parser")
 # downloads it at runtime — even if md is already installed.
 nlp_configuration = {
     "nlp_engine_name": "spacy",
-    "models": [
-        {"lang_code": "en", "model_name": "en_core_web_md"}
-    ]
+    "models": [{"lang_code": "en", "model_name": "en_core_web_md"}],
 }
 nlp_engine = NlpEngineProvider(nlp_configuration=nlp_configuration).create_engine()
 
@@ -27,11 +25,15 @@ anonymizer = AnonymizerEngine()
 # --- Custom recognizers ---
 # Singapore NRIC/FIN (regex for S1234567A or F1234567B)
 nric_pattern = Pattern(name="NRIC/FIN", regex=r"\b[STFG]\d{7}[A-Z]\b", score=0.8)
-nric_recognizer = PatternRecognizer(supported_entity="NRIC_FIN", patterns=[nric_pattern])
+nric_recognizer = PatternRecognizer(
+    supported_entity="NRIC_FIN", patterns=[nric_pattern]
+)
 analyzer.registry.add_recognizer(nric_recognizer)
+
 
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+
 
 def pii_removal_node(state):
     """
@@ -43,20 +45,18 @@ def pii_removal_node(state):
 
         # Restrict analyzer to only the PHI entities we care about
         target_entities = [
-            "PERSON",          # names
-            "PHONE_NUMBER",    # phone
-            "EMAIL_ADDRESS",   # email
-            "LOCATION",        # address
-            "NRIC_FIN"         # custom
+            "PERSON",  # names
+            "PHONE_NUMBER",  # phone
+            "EMAIL_ADDRESS",  # email
+            "LOCATION",  # address
+            "NRIC_FIN",  # custom
         ]
 
         config_operators = {}
 
         # call presidio analyzer to detect PII >> returns a list of objects
         results = analyzer.analyze(
-            text=text_input,
-            language="en",
-            entities=target_entities
+            text=text_input, language="en", entities=target_entities
         )
 
         # initialize new and empty PII-Value mapping and count the number of PIIs
@@ -64,7 +64,7 @@ def pii_removal_node(state):
         counter = 1
 
         for result in results:
-            value = text_input[result.start:result.end]
+            value = text_input[result.start : result.end]
             entity_type = result.entity_type
 
             # Avoid assigning a new placeholder if the same raw value appears twice
@@ -80,6 +80,7 @@ def pii_removal_node(state):
         def make_replacer(lookup: dict):
             def replacer(text: str) -> str:
                 return lookup.get(text, text)
+
             return replacer
 
         config_operators = {
@@ -89,20 +90,24 @@ def pii_removal_node(state):
 
         # running the presidio anonymizer once all operators are configured
         anonymized_result = anonymizer.anonymize(
-            text=text_input,
-            analyzer_results=results,
-            operators=config_operators
+            text=text_input, analyzer_results=results, operators=config_operators
         )
 
         # anonymizer returns an AnonymizedResult object; extract the text field
-        sanitized = anonymized_result.text if hasattr(anonymized_result, "text") else str(anonymized_result)
+        sanitized = (
+            anonymized_result.text
+            if hasattr(anonymized_result, "text")
+            else str(anonymized_result)
+        )
 
-        logger.info(f"Sanitized Content: {sanitized[:200]}...")  # Log first 200 chars of sanitized text
+        logger.info(
+            f"Sanitized Content: {sanitized[:200]}..."
+        )  # Log first 200 chars of sanitized text
 
         return {
             "sanitized_text": sanitized,
             "next_node": "clinical_analysis",
-            "last_updated": now()
+            "last_updated": now(),
         }
 
     except Exception as e:
@@ -113,5 +118,5 @@ def pii_removal_node(state):
             "sanitized_text": "An error occurred while processing the document.",
             "next_node": "compliance",
             "final_response": "An error has occurred. Please try again later.",
-            "last_updated": now()
+            "last_updated": now(),
         }

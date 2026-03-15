@@ -10,8 +10,10 @@ from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("risk_assessment")
 
+
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+
 
 def risk_assessment_node(state):
     """
@@ -20,11 +22,11 @@ def risk_assessment_node(state):
 
     try:
         # Load prompt config from JSON
-        version = settings.PROMPT_VERSIONS.get("risk_assessment", settings.DEFAULT_PROMPT_VERSION)
+        version = settings.PROMPT_VERSIONS.get(
+            "risk_assessment", settings.DEFAULT_PROMPT_VERSION
+        )
         analysis_config = load_prompt_config(
-            module="risk_assessment",
-            key="risk_assessment",
-            version=version
+            module="risk_assessment", key="risk_assessment", version=version
         )
 
         system_prompt = analysis_config["system"]
@@ -33,15 +35,21 @@ def risk_assessment_node(state):
 
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=state.parsed_text)
-        ]).content.strip().upper()
+        result = (
+            llm.invoke(
+                [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=state.parsed_text),
+                ]
+            )
+            .content.strip()
+            .upper()
+        )
 
         return {
             "risk_assessment": result,
             "next_node": "insights_summary",
-            "last_updated": now()
+            "last_updated": now(),
         }
 
     except Exception as e:
@@ -51,5 +59,5 @@ def risk_assessment_node(state):
         return {
             "next_node": "end",
             "final_response": "An error has occurred. Please try again later.",
-            "last_updated": now()
+            "last_updated": now(),
         }

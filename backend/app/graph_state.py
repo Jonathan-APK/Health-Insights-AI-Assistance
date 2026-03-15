@@ -8,7 +8,9 @@ from pydantic import BaseModel
 class State(BaseModel):
     # Core session info
     session_id: str
-    session_data: Optional[Dict[str, Any]] = None  # Store any session-specific data here
+    session_data: Optional[Dict[str, Any]] = (
+        None  # Store any session-specific data here
+    )
     input_text: Optional[str] = None
     file_meta: Optional[Dict[str, Any]] = None
     file_bytes: Optional[bytes] = None
@@ -23,16 +25,16 @@ class State(BaseModel):
     # Past analysis
     analysis: Optional[list] = None  # list of analysis results
 
-    #Input Guardrail
+    # Input Guardrail
     input_guardrail_passed: Optional[bool] = None
     input_guardrail_block_reason: Optional[str] = None
 
     # Document processing outputs
-    parsed_text: Optional[str] = None           # before PII removal
-    sanitized_text: Optional[str] = None          # after PII removal
-    clinical_analysis: Optional[str] = None    # summary of findings
-    risk_assessment: Optional[str] = None      # list of risk flags
-    insights_summary: Optional[str] = None       # consolidated insights
+    parsed_text: Optional[str] = None  # before PII removal
+    sanitized_text: Optional[str] = None  # after PII removal
+    clinical_analysis: Optional[str] = None  # summary of findings
+    risk_assessment: Optional[str] = None  # list of risk flags
+    insights_summary: Optional[str] = None  # consolidated insights
 
     # QnA output
     qna_answer: Optional[str] = None

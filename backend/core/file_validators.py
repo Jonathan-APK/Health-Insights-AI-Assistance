@@ -19,8 +19,13 @@ class FileValidator:
             return False, "File size exceeds 5MB limit"
 
         # Check 2: File extension
-        if not any(filename.lower().endswith(ext) for ext in FileValidator.ALLOWED_EXTENSIONS):
-            return False, f"File type not supported. Allowed: {', '.join(FileValidator.ALLOWED_EXTENSIONS)}"
+        if not any(
+            filename.lower().endswith(ext) for ext in FileValidator.ALLOWED_EXTENSIONS
+        ):
+            return (
+                False,
+                f"File type not supported. Allowed: {', '.join(FileValidator.ALLOWED_EXTENSIONS)}",
+            )
 
         # Check 3: MIME type (actual content, not just extension)
         mime = magic.from_buffer(file_bytes, mime=True)

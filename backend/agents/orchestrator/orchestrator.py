@@ -11,8 +11,10 @@ from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("orchestrator")
 
+
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+
 
 def orchestrator_node(state):
     """
@@ -31,11 +33,11 @@ def orchestrator_node(state):
         logger.info("Has Text Only")
 
         # Load classification prompt config from JSON
-        version = settings.PROMPT_VERSIONS.get("orchestrator", settings.DEFAULT_PROMPT_VERSION)
+        version = settings.PROMPT_VERSIONS.get(
+            "orchestrator", settings.DEFAULT_PROMPT_VERSION
+        )
         classification_config = load_prompt_config(
-            module="orchestrator",
-            key="classification",
-            version=version
+            module="orchestrator", key="classification", version=version
         )
 
         system_prompt = classification_config["system"]
@@ -48,46 +50,48 @@ def orchestrator_node(state):
 
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=context)
-        ]).content.strip().upper()
+        result = (
+            llm.invoke(
+                [SystemMessage(content=system_prompt), HumanMessage(content=context)]
+            )
+            .content.strip()
+            .upper()
+        )
 
         logger.info("Orchestrator classification result: %s", result)
 
         if result == "OFF_TOPIC":
             # Load off-topic response prompt config from JSON
             response_config = load_prompt_config(
-                module="orchestrator",
-                key="off_topic_response",
-                version=version
+                module="orchestrator", key="off_topic_response", version=version
             )
 
             response_prompt = response_config["system"]
             response_model = response_config["model"]
             response_temperature = response_config["temperature"]
 
-            llm_response = ChatOpenAI(model=response_model, temperature=response_temperature)
-            contextual_response = llm_response.invoke([
-                SystemMessage(content=response_prompt),
-                HumanMessage(content=f"User message: '{state.input_text}'")
-            ]).content.strip()
+            llm_response = ChatOpenAI(
+                model=response_model, temperature=response_temperature
+            )
+            contextual_response = llm_response.invoke(
+                [
+                    SystemMessage(content=response_prompt),
+                    HumanMessage(content=f"User message: '{state.input_text}'"),
+                ]
+            ).content.strip()
 
             logger.info("Generated off-topic response: %s", contextual_response)
-            print("=" * 50 +"\n")
+            print("=" * 50 + "\n")
 
             return {
                 "pre_compliance_response": contextual_response,
                 "next_node": "compliance",
-                "last_updated": now()
+                "last_updated": now(),
             }
 
         # Medical = route to QnA
-        print("=" * 50 +"\n")
-        return {
-            "next_node": "qna",
-            "last_updated": now()
-        }
+        print("=" * 50 + "\n")
+        return {"next_node": "qna", "last_updated": now()}
 
     # -----------------------------
     # FILE ONLY = document pipeline
@@ -95,10 +99,7 @@ def orchestrator_node(state):
     if has_file and not has_text:
         logger.info("Has File Only")
 
-        return {
-            "next_node": "doc_pipeline",
-            "last_updated": now()
-        }
+        return {"next_node": "doc_pipeline", "last_updated": now()}
 
     # -----------------------------
     # BOTH FILE + TEXT = doc pipeline first, then QnA
@@ -106,15 +107,12 @@ def orchestrator_node(state):
     if has_file and has_text:
         logger.info("Has File and Text")
 
-        print("=" * 50 +"\n")
-        return {
-            "next_node": "doc_then_qna",
-            "last_updated": now()
-        }
+        print("=" * 50 + "\n")
+        return {"next_node": "doc_then_qna", "last_updated": now()}
 
     # Fallback
     return {
         "next_node": "compliance",
         "final_response": "An error has occurred. Please try again later.",
-        "last_updated": now()
+        "last_updated": now(),
     }

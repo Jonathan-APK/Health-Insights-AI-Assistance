@@ -22,12 +22,12 @@ def build_context(state) -> str:
         analysis_lines = [
             f"PREVIOUS DOCUMENT ANALYSIS: {latest.get('filename', '')}",
             f"  • Clinical Findings: {latest.get('clinical_analysis', '')}",
-            f"  • Risk Flags: {latest.get('risk_assessment', []) if latest.get('risk_assessment') else 'None'}"
+            f"  • Risk Flags: {latest.get('risk_assessment', []) if latest.get('risk_assessment') else 'None'}",
         ]
         context_parts.append("\n".join(analysis_lines))
 
     # 3. Current message (highlighted)
     if getattr(state, "input_text", None):
-        context_parts.append(f"NEW MESSAGE FROM USER:\n  \"{state.input_text}\"")
+        context_parts.append(f'NEW MESSAGE FROM USER:\n  "{state.input_text}"')
 
     return "\n\n".join(context_parts) if context_parts else ""

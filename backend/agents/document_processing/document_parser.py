@@ -8,17 +8,22 @@ import pymupdf4llm
 
 logger = logging.getLogger("document_parser")
 
+
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+
 
 def document_parser_node(state):
     """
     Parse PDF
     """
 
-
     file_bytes = state.file_bytes
-    filename = state.file_meta.get("filename", "unknown.pdf") if state.file_meta else "unknown.pdf"
+    filename = (
+        state.file_meta.get("filename", "unknown.pdf")
+        if state.file_meta
+        else "unknown.pdf"
+    )
 
     if not file_bytes:
         logger.error("No file bytes")
@@ -26,7 +31,7 @@ def document_parser_node(state):
             "next_node": "end",
             "final_response": "Error: No file content",
             "last_updated": now(),
-            "file_bytes": None    # clear file bytes after parsing
+            "file_bytes": None,  # clear file bytes after parsing
         }
 
     try:
@@ -45,7 +50,7 @@ def document_parser_node(state):
             "parsed_text": safe_text,
             "next_node": "pii_removal",
             "last_updated": now(),
-            "file_bytes": None    # clear file bytes after parsing
+            "file_bytes": None,  # clear file bytes after parsing
         }
 
     except Exception as e:
@@ -56,5 +61,5 @@ def document_parser_node(state):
             "next_node": "compliance",
             "final_response": "An error has occurred. Please try again later.",
             "last_updated": now(),
-            "file_bytes": None    # clear file bytes after parsing
+            "file_bytes": None,  # clear file bytes after parsing
         }

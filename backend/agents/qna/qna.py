@@ -11,8 +11,10 @@ from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("Q&A Agent")
 
+
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+
 
 def qna_node(state):
     """
@@ -22,11 +24,7 @@ def qna_node(state):
     try:
         # Load prompt config from JSON
         version = settings.PROMPT_VERSIONS.get("qna", settings.DEFAULT_PROMPT_VERSION)
-        analysis_config = load_prompt_config(
-            module="qna",
-            key="qna",
-            version=version
-        )
+        analysis_config = load_prompt_config(module="qna", key="qna", version=version)
 
         system_prompt = analysis_config["system"]
         model = analysis_config["model"]
@@ -39,19 +37,20 @@ def qna_node(state):
 
         context += build_context(state)
 
-        logger.info(f"Context built for QnA Node: {context[:5000]}...")  # Log only the first 5000 chars of context
+        logger.info(
+            f"Context built for QnA Node: {context[:5000]}..."
+        )  # Log only the first 5000 chars of context
 
         # Call LLM with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=context)
-        ]).content.strip()
+        result = llm.invoke(
+            [SystemMessage(content=system_prompt), HumanMessage(content=context)]
+        ).content.strip()
 
         return {
-                "qna_answer": result,
-                "pre_compliance_response": result,
-                "last_updated": now()
+            "qna_answer": result,
+            "pre_compliance_response": result,
+            "last_updated": now(),
         }
 
     except Exception as e:
@@ -61,5 +60,5 @@ def qna_node(state):
         return {
             "next_node": "end",
             "final_response": "An error has occurred. Please try again later.",
-            "last_updated": now()
+            "last_updated": now(),
         }
