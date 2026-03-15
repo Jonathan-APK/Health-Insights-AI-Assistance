@@ -1,10 +1,12 @@
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from langchain_openai import ChatOpenAI
+
 from langchain_core.messages import HumanMessage, SystemMessage
-from core.prompt_loader import load_prompt_config
+from langchain_openai import ChatOpenAI
+
 from config.settings import settings
-import logging
+from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("clinical_analysis")
 
@@ -28,14 +30,14 @@ def clinical_analysis_node(state):
         system_prompt = analysis_config["system"]
         model = analysis_config["model"]
         temperature = analysis_config["temperature"]
- 
+
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
         result = llm.invoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=state.sanitized_text)
         ]).content.strip().upper()
-        
+
         if result == "OFF_TOPIC" and state.input_text:
             logger.info("Document classified as OFF_TOPIC with user input. Routing to QnA node.")
             return {
@@ -72,6 +74,6 @@ def clinical_analysis_node(state):
         return {
             "next_node": "end",
             "sanitized_text": None, # Clear sanitized text on error
-            "final_response": f"An error has occurred. Please try again later.",
+            "final_response": "An error has occurred. Please try again later.",
             "last_updated": now()
         }

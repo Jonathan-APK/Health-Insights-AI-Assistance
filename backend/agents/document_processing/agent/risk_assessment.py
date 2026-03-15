@@ -1,10 +1,12 @@
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from langchain_openai import ChatOpenAI
+
 from langchain_core.messages import HumanMessage, SystemMessage
-from core.prompt_loader import load_prompt_config
+from langchain_openai import ChatOpenAI
+
 from config.settings import settings
-import logging
+from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("risk_assessment")
 
@@ -28,26 +30,26 @@ def risk_assessment_node(state):
         system_prompt = analysis_config["system"]
         model = analysis_config["model"]
         temperature = analysis_config["temperature"]
- 
+
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
         result = llm.invoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=state.parsed_text)
         ]).content.strip().upper()
-        
+
         return {
             "risk_assessment": result,
             "next_node": "insights_summary",
             "last_updated": now()
         }
-    
+
     except Exception as e:
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
         logger.error(f"Error Encountered: {short_msg}")
         return {
             "next_node": "end",
-            "final_response": f"An error has occurred. Please try again later.",
+            "final_response": "An error has occurred. Please try again later.",
             "last_updated": now()
         }

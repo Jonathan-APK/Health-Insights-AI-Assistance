@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
+
+from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
@@ -51,14 +52,14 @@ def pii_removal_node(state):
 
         config_operators = {}
 
-        # call presidio analyzer to detect PII >> returns a list of objects 
+        # call presidio analyzer to detect PII >> returns a list of objects
         results = analyzer.analyze(
             text=text_input,
             language="en",
             entities=target_entities
         )
 
-        # initialize new and empty PII-Value mapping and count the number of PIIs 
+        # initialize new and empty PII-Value mapping and count the number of PIIs
         pii_map = {}
         counter = 1
 
@@ -95,7 +96,7 @@ def pii_removal_node(state):
 
         # anonymizer returns an AnonymizedResult object; extract the text field
         sanitized = anonymized_result.text if hasattr(anonymized_result, "text") else str(anonymized_result)
-        
+
         logger.info(f"Sanitized Content: {sanitized[:200]}...")  # Log first 200 chars of sanitized text
 
         return {
@@ -103,7 +104,7 @@ def pii_removal_node(state):
             "next_node": "clinical_analysis",
             "last_updated": now()
         }
-        
+
     except Exception as e:
         msg = str(e)
         short_msg = msg[:100] if len(msg) > 100 else msg
@@ -111,6 +112,6 @@ def pii_removal_node(state):
         return {
             "sanitized_text": "An error occurred while processing the document.",
             "next_node": "compliance",
-            "final_response": f"An error has occurred. Please try again later.",
+            "final_response": "An error has occurred. Please try again later.",
             "last_updated": now()
         }

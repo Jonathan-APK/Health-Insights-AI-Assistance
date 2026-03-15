@@ -1,11 +1,13 @@
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from langchain_openai import ChatOpenAI
+
 from langchain_core.messages import HumanMessage, SystemMessage
-from core.prompt_loader import load_prompt_config
+from langchain_openai import ChatOpenAI
+
 from config.settings import settings
 from core.context_builder import build_context
-import logging
+from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("orchestrator")
 
@@ -35,7 +37,7 @@ def orchestrator_node(state):
             key="classification",
             version=version
         )
-        
+
         system_prompt = classification_config["system"]
         model = classification_config["model"]
         temperature = classification_config["temperature"]
@@ -60,17 +62,17 @@ def orchestrator_node(state):
                 key="off_topic_response",
                 version=version
             )
-            
+
             response_prompt = response_config["system"]
             response_model = response_config["model"]
             response_temperature = response_config["temperature"]
-            
+
             llm_response = ChatOpenAI(model=response_model, temperature=response_temperature)
             contextual_response = llm_response.invoke([
                 SystemMessage(content=response_prompt),
                 HumanMessage(content=f"User message: '{state.input_text}'")
             ]).content.strip()
-            
+
             logger.info("Generated off-topic response: %s", contextual_response)
             print("=" * 50 +"\n")
 
@@ -79,7 +81,7 @@ def orchestrator_node(state):
                 "next_node": "compliance",
                 "last_updated": now()
             }
-        
+
         # Medical = route to QnA
         print("=" * 50 +"\n")
         return {

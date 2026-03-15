@@ -1,21 +1,23 @@
 import json
-from langgraph.graph import StateGraph, START, END
-from fastapi import APIRouter, Header, Request, UploadFile, File, Form, Response
-from fastapi.responses import StreamingResponse
-from typing import Optional
-from app.graph_state import State
+import logging
 from datetime import datetime
+from typing import Optional
 from zoneinfo import ZoneInfo
-from agents.orchestrator import orchestrator
+
+from fastapi import APIRouter, File, Form, Header, Request, Response, UploadFile
+from fastapi.responses import StreamingResponse
+from langgraph.graph import END, START, StateGraph
+
+from agents.compliance.compliance import compliance_node
 from agents.document_processing.agent.clinical_analysis import clinical_analysis_node
-from agents.document_processing.document_parser import document_parser_node
 from agents.document_processing.agent.insights_summary import insights_summary_node
 from agents.document_processing.agent.risk_assessment import risk_assessment_node
+from agents.document_processing.document_parser import document_parser_node
 from agents.document_processing.pii_removal import pii_removal_node
-from agents.compliance.compliance import compliance_node
 from agents.guardrail.input_guardrail import input_guardrail_node
+from agents.orchestrator import orchestrator
 from agents.qna.qna import qna_node
-import logging  
+from app.graph_state import State
 
 logger = logging.getLogger("chat")
 router = APIRouter()
@@ -43,15 +45,15 @@ async def chat(
     file: Optional[UploadFile] = File(None, description="Optional file upload"),
     response: Response = None,
     x_session_id: Optional[str] = Header(None)
-):  
-    # Get managers from app state 
+):
+    # Get managers from app state
     session_manager = request.app.state.session_manager
 
     # Get session data and set session id in response header
     session_data = await session_manager.get_or_create_session(x_session_id)
     current_session_id = session_data["session_id"]
     response.headers["X-Session-ID"] = current_session_id
-    
+
     logger.info(f"Session data:\n{json.dumps(session_data, indent=2)}")
 
     # Build graph once and store in app.state
@@ -104,7 +106,7 @@ async def chat(
                 "message": "No response generated."
             })
             return
-        
+
         # --------------------------------------------------
         # Persist session after pipeline completes
         # --------------------------------------------------
@@ -178,14 +180,13 @@ async def health_check():
 def build_graph():
     """
     Build the orchestrator graph with 3 routing scenarios:
-    
     1. Input Text only -> Input Guardrail -> Orchestrator agent -> QnA agent  → Compliance agent  -> END
-    2a. File only -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> Compliance agent -> END  
+    2a. File only -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> Compliance agent -> END
     2b. File only -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Non-Health/Medical Related) -> QnA agent -> Compliance agent -> END
     3a. File + Input Text -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Health/Medical Related) -> Risk agent -> Insights Summary agent -> QnA agent -> Compliance agent -> END
     3b. File + Input Text -> Input Guardrail -> Orchestrator agent -> Document Parser service -> PII Removal service -> Clinical agent (Non-Health/Medical Related) -> QnA agent -> Compliance agent -> END
     """
-    
+
     builder = StateGraph(State)
 
     # Add all nodes
@@ -211,12 +212,12 @@ def build_graph():
         Perform checks on the input and determine next node.
         """
         next_node = state.next_node
-        
+
         if next_node == "orchestrator":
             return "orchestrator"
         else:
             return "END"
-        
+
     builder.add_conditional_edges(
         "input_guardrail",
         route_from_input_guardrail,
@@ -224,7 +225,7 @@ def build_graph():
             "orchestrator": "orchestrator",
             "END": END
         }
-    )   
+    )
 
     # ============================================
     # Conditional routing from orchestrator
@@ -232,13 +233,12 @@ def build_graph():
     def route_from_orchestrator(state: State) -> str:
         """
         Determine initial route based on input.
-        
         Routes:
         - "doc_pipeline" -> File only OR File + Text
         - "qna" -> Text only
         """
         next_node = state.next_node
-        
+
         if next_node == "doc_pipeline" or next_node == "doc_then_qna":
             return "document_parser"
         elif next_node == "qna":
@@ -246,7 +246,7 @@ def build_graph():
         else:
             # Fallback - shouldn't happen
             return "compliance"
-        
+
     builder.add_conditional_edges(
         "orchestrator",
         route_from_orchestrator,
@@ -255,27 +255,26 @@ def build_graph():
             "qna": "qna",
             "compliance": "compliance"
         }
-    )   
-    
+    )
+
     # ============================================
     # Conditional routing from Document Parser
     # ============================================
     def route_from_document_parser(state: State) -> str:
         """
         Determine route after document parsing.
-        
         Routes:
         - No issue parsing document -> Go to PII Removal
         - Issue -> END with error message
         """
         next_node = state.next_node
-        
+
         if next_node == "pii_removal":
             return "pii_removal"
         else:
             # Fallback - shouldn't happen
             return "compliance"
-        
+
     builder.add_conditional_edges(
         "document_parser",
         route_from_document_parser,
@@ -283,7 +282,7 @@ def build_graph():
             "pii_removal": "pii_removal",
             "compliance": "compliance"
         }
-    )  
+    )
 
     builder.add_edge("pii_removal", "clinical_analysis")
 
@@ -293,14 +292,13 @@ def build_graph():
     def route_from_clinical_analysis(state: State) -> str:
         """
         Determine route after clinical analysis.
-        
         Routes:
         - if medical related -> route to risk_assessment
         - if not medical related + No input text -> route to compliance (skip risk assessment)
         - if not medical related + Has input text -> route to QnA (skip risk assessment)
         """
         next_node = state.next_node
-        
+
         if next_node == "risk_assessment":
             return "risk_assessment"
         elif next_node == "compliance":
@@ -310,7 +308,7 @@ def build_graph():
         else:
             # Fallback - shouldn't happen
             return "compliance"
-    
+
 
     builder.add_conditional_edges(
         "clinical_analysis",
@@ -333,14 +331,14 @@ def build_graph():
         - If file only → Go straight to compliance
         """
         next_node = state.next_node
-        
+
         # If user uploaded file + asked a question
         if next_node == "qna":
             return "qna"
         else:
             # File only - go straight to compliance
             return "compliance"
-    
+
     builder.add_conditional_edges(
         "insights_summary",
         route_after_insights,
@@ -349,7 +347,7 @@ def build_graph():
             "compliance": "compliance"
         }
     )
-    
+
     # ============================================
     # Risk Assessment always goes to Insights Summary
     # ============================================

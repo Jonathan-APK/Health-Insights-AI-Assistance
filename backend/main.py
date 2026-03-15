@@ -1,11 +1,16 @@
+# Load application settings early; this reads from the environment (or
+# .env in local development).
+import logging
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from api.routes import chat
-from core.session import SessionManager
 from redis.asyncio import Redis
-from dotenv import load_dotenv
-import logging
+
+from api.routes import chat
+from config.settings import settings
+from core.session import SessionManager
 
 # Configure logging globally
 logging.basicConfig(
@@ -14,9 +19,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
-# Load application settings early; this reads from the environment (or
-# .env in local development).
-from config.settings import settings
 
 # Lifespan context manager
 async def lifespan(app: FastAPI):

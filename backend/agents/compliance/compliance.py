@@ -1,11 +1,13 @@
+import json
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from langchain_openai import ChatOpenAI
+
 from langchain_core.messages import HumanMessage, SystemMessage
-from core.prompt_loader import load_prompt_config
+from langchain_openai import ChatOpenAI
+
 from config.settings import settings
-import logging
-import json
+from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("compliance")
 
@@ -40,14 +42,14 @@ def compliance_node(state):
         system_prompt = analysis_config["system"]
         model = analysis_config["model"]
         temperature = analysis_config["temperature"]
- 
+
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
         result = llm.invoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=state.pre_compliance_response)
         ]).content.strip()
-        
+
         # Parse JSON response from LLM
         # Strip markdown code fences if present
         clean_result = result.replace("```json", "").replace("```", "").strip()
@@ -69,7 +71,7 @@ def compliance_node(state):
             "next_node": "END",
             "last_updated": now()
         }
-            
+
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse compliance LLM response as JSON: {str(e)}")
         return {

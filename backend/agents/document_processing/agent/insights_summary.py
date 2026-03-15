@@ -1,10 +1,12 @@
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from langchain_openai import ChatOpenAI
+
 from langchain_core.messages import HumanMessage, SystemMessage
-from core.prompt_loader import load_prompt_config
+from langchain_openai import ChatOpenAI
+
 from config.settings import settings
-import logging
+from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("insights_summary")
 
@@ -28,7 +30,7 @@ def insights_summary_node(state):
         system_prompt = analysis_config["system"]
         model = analysis_config["model"]
         temperature = analysis_config["temperature"]
- 
+
         # Combine both Clinical Analysis and Risk Assessment fields
         combined_content = f"""Clinical Analysis:
         {state.clinical_analysis}
@@ -42,7 +44,7 @@ def insights_summary_node(state):
             SystemMessage(content=system_prompt),
             HumanMessage(content=combined_content)
         ]).content.strip()
-        
+
         if state.input_text:
             logger.info("User entered text, past to QnA agent for further processing.")
             return {
@@ -65,6 +67,6 @@ def insights_summary_node(state):
         logger.error(f"Error Encountered: {short_msg}")
         return {
             "next_node": "end",
-            "final_response": f"An error has occurred. Please try again later.",
+            "final_response": "An error has occurred. Please try again later.",
             "last_updated": now()
         }

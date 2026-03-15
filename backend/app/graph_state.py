@@ -1,7 +1,9 @@
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, Optional
 from zoneinfo import ZoneInfo
+
+from pydantic import BaseModel
+
 
 class State(BaseModel):
     # Core session info
@@ -12,13 +14,13 @@ class State(BaseModel):
     file_bytes: Optional[bytes] = None
     file: Optional[Any] = None  # Store the UploadFile object for later use if needed
 
-    # Workflow routing flag 
+    # Workflow routing flag
     next_node: Optional[str] = None
 
     # Conversation history
     conversation_history: Optional[list] = None  # list of past conversations
-    
-    # Past analysis 
+
+    # Past analysis
     analysis: Optional[list] = None  # list of analysis results
 
     #Input Guardrail

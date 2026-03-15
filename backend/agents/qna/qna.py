@@ -1,11 +1,13 @@
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from langchain_openai import ChatOpenAI
+
 from langchain_core.messages import HumanMessage, SystemMessage
-from core.prompt_loader import load_prompt_config
+from langchain_openai import ChatOpenAI
+
 from config.settings import settings
 from core.context_builder import build_context
-import logging
+from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("Q&A Agent")
 
@@ -29,7 +31,7 @@ def qna_node(state):
         system_prompt = analysis_config["system"]
         model = analysis_config["model"]
         temperature = analysis_config["temperature"]
- 
+
         context = ""
 
         if state.insights_summary:
@@ -45,7 +47,7 @@ def qna_node(state):
             SystemMessage(content=system_prompt),
             HumanMessage(content=context)
         ]).content.strip()
-        
+
         return {
                 "qna_answer": result,
                 "pre_compliance_response": result,
@@ -58,6 +60,6 @@ def qna_node(state):
         logger.error(f"Error Encountered: {short_msg}")
         return {
             "next_node": "end",
-            "final_response": f"An error has occurred. Please try again later.",
+            "final_response": "An error has occurred. Please try again later.",
             "last_updated": now()
         }

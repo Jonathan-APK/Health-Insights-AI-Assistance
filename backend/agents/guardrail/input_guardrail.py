@@ -1,16 +1,17 @@
-from datetime import datetime
 import json
-from zoneinfo import ZoneInfo
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
-from core.prompt_loader import load_prompt_config
-from config.settings import settings
-from typing import Optional
-from fastapi import HTTPException, UploadFile
-from config.settings import settings
-from core.file_validators import FileValidator
 import logging
 import re
+from datetime import datetime
+from typing import Optional
+from zoneinfo import ZoneInfo
+
+from fastapi import HTTPException, UploadFile
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+
+from config.settings import settings
+from core.file_validators import FileValidator
+from core.prompt_loader import load_prompt_config
 
 logger = logging.getLogger("input_guardrail")
 
@@ -28,12 +29,12 @@ async def input_guardrail_node(state):
     try:
         # 1. Must have either message or file
         validate_input(state.input_text, state.file)
-            
+
         # 2. Rate limit checks
         session_data = state.session_data
         message_count = session_data.get("message_count", 0)
         upload_count = session_data.get("upload_count", 0)
-        
+
         # Check max messages per session
         if message_count >= settings.MAX_MESSAGES_PER_SESSION:
             return {
@@ -45,7 +46,7 @@ async def input_guardrail_node(state):
                 "last_updated": now(),
                 "file": None,
             }
-        
+
         # Check max uploads per session
         if state.file and upload_count >= settings.MAX_UPLOADS_PER_SESSION:
             return {
@@ -64,9 +65,9 @@ async def input_guardrail_node(state):
 
         if state.file:
             # Validate file type
-            file_bytes = await state.file.read() 
-            is_valid, error = FileValidator.validate_file(file_bytes, state.file.filename) 
-            if not is_valid: 
+            file_bytes = await state.file.read()
+            is_valid, error = FileValidator.validate_file(file_bytes, state.file.filename)
+            if not is_valid:
                 return {
                     "session_data": None,
                     "input_guardrail_passed": False,
@@ -76,7 +77,7 @@ async def input_guardrail_node(state):
                     "last_updated": now(),
                     "file": None
                 }
-            
+
             file_meta = {
                 "filename": state.file.filename,
                 "content_type": state.file.content_type,
@@ -144,7 +145,7 @@ async def input_guardrail_node(state):
                         "last_updated": now(),
                         "file": None
                     }
-                
+
             # LLM classifier to check prompt injection and harmful content
             version = settings.PROMPT_VERSIONS.get("input_guardrail", settings.DEFAULT_PROMPT_VERSION)
             classification_config = load_prompt_config(
@@ -152,7 +153,7 @@ async def input_guardrail_node(state):
                 key="classification",
                 version=version
             )
-            
+
             system_prompt = classification_config["system"]
             model = classification_config["model"]
             temperature = classification_config["temperature"]
@@ -197,7 +198,7 @@ async def input_guardrail_node(state):
                     "file": None
                 }
 
-        # PASS 
+        # PASS
         return {
             "session_data": None,
             "input_guardrail_passed": True,
