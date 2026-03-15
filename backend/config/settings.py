@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------
     # runtime environment
     # ---------------------------------------------------------------
-    ENV: Literal["local", "production"] = "local"
+    ENV: Literal["local", "production", "test"] = "local"
 
     @property
     def is_production(self) -> bool:  # pragma: no cover - trivial
