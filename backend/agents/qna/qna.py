@@ -51,6 +51,25 @@ def sanitize_user_input(user_input: str) -> str:
         sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE)
     return sanitized
 
+# Additional check for medical advice in output 
+def detect_medical_output_risk(output: str) -> bool:
+    risky_keywords = [
+        "take .* mg", 
+        "dosage", 
+        "prescribe", 
+        "stop taking", 
+        "start taking", 
+        "you should take",
+        "diagnose",
+        "treatment plan"]
+
+    for keyword in risky_keywords:
+        if re.search(keyword, output, re.IGNORECASE):
+            logger.warning(f"Potential medical advice detected in output: '{keyword}' found.")
+            return True
+        
+    return False
+
 def qna_node(state):
     """
     Health and Medical Q&A Assistant
@@ -99,6 +118,11 @@ def qna_node(state):
         result = llm.invoke(
             [SystemMessage(content=system_prompt), HumanMessage(content=clean_user_input)]
         ).content.strip()
+
+        # Check for potential medical advice in output and modify response if necessary
+        if detect_medical_output_risk(result):
+            logger.warning("Potential medical advice detected in LLM output. Modifying response to ensure safety.")
+            result = result +"\n\n Disclaimer: The response contains information that may be considered medical advice. Please consult a qualified healthcare professional for personalized guidance."
 
         return {
             "qna_answer": result,
