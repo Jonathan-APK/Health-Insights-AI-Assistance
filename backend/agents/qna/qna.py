@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime
 import re
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -19,6 +19,7 @@ logger = logging.getLogger("Q&A Agent")
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
 
+
 # Prompt injection detection
 def detect_prompt_injection(user_input: str) -> bool:
     suspicious_patterns = [
@@ -27,48 +28,59 @@ def detect_prompt_injection(user_input: str) -> bool:
         "developer mode",
         "system prompt",
         "bypass filters",
-        "jailbreak"]
+        "jailbreak",
+    ]
     lower_input = user_input.lower()
     for pattern in suspicious_patterns:
         if pattern in lower_input:
-            logger.warning(f"Potential prompt injection detected: '{pattern}' found in user input.")
+            logger.warning(
+                f"Potential prompt injection detected: '{pattern}' found in user input."
+            )
             return True
-        
+
     return False
+
 
 # Sanitization to remove potentially harmful content
 def sanitize_user_input(user_input: str) -> str:
-    patterns = [r"ignore previous instructions",
-                r"reveal system prompt",
-                r"developer mode",
-                r"system prompt",
-                r"bypass filters",
-                r"jailbreak"]
-    
+    patterns = [
+        r"ignore previous instructions",
+        r"reveal system prompt",
+        r"developer mode",
+        r"system prompt",
+        r"bypass filters",
+        r"jailbreak",
+    ]
+
     # Basic sanitization to remove potentially harmful content
     sanitized = user_input
     for pattern in patterns:
         sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE)
     return sanitized
 
-# Additional check for medical advice in output 
+
+# Additional check for medical advice in output
 def detect_medical_output_risk(output: str) -> bool:
     risky_keywords = [
-        "take .* mg", 
-        "dosage", 
-        "prescribe", 
-        "stop taking", 
-        "start taking", 
+        "take .* mg",
+        "dosage",
+        "prescribe",
+        "stop taking",
+        "start taking",
         "you should take",
         "diagnose",
-        "treatment plan"]
+        "treatment plan",
+    ]
 
     for keyword in risky_keywords:
         if re.search(keyword, output, re.IGNORECASE):
-            logger.warning(f"Potential medical advice detected in output: '{keyword}' found.")
+            logger.warning(
+                f"Potential medical advice detected in output: '{keyword}' found."
+            )
             return True
-        
+
     return False
+
 
 def qna_node(state):
     """
@@ -98,11 +110,11 @@ def qna_node(state):
                 "pre_compliance_response": "Blocked Suspicious Prompt",
                 "last_updated": now(),
             }
-        
+
         # Sanitize user input before processing
         clean_user_input = sanitize_user_input(user_input)
         # log sanitized input
-        logger.info(f"Sanitized user input for QnA Node: {clean_user_input}...") 
+        logger.info(f"Sanitized user input for QnA Node: {clean_user_input}...")
 
         # Update state with sanitized input
         state.user_input = clean_user_input
@@ -145,8 +157,13 @@ def qna_node(state):
 
         # Check for potential medical advice in output and modify response if necessary
         if detect_medical_output_risk(result):
-            logger.warning("Potential medical advice detected in LLM output. Modifying response to ensure safety.")
-            result = result +"\n\n Disclaimer: The response contains information that may be considered medical advice. Please consult a qualified healthcare professional for personalized guidance."
+            logger.warning(
+                "Potential medical advice detected in LLM output. Modifying response to ensure safety."
+            )
+            result = (
+                result
+                + "\n\n Disclaimer: The response contains information that may be considered medical advice. Please consult a qualified healthcare professional for personalized guidance."
+            )
 
         return {
             "qna_answer": result,
