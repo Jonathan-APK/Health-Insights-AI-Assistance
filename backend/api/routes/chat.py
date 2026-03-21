@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, File, Form, Header, Request, Response, UploadFile
+from fastapi import APIRouter, File, Form, Header, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from langgraph.graph import END, START, StateGraph
 
@@ -50,7 +50,6 @@ async def chat(
     # Get managers from app state
     session_manager = request.app.state.session_manager
     logger.info(f"Session from header: {x_session_id}")
-    
     # Get session data and set session id in response header
     session_data = await session_manager.get_or_create_session(x_session_id)
     current_session_id = session_data["session_id"]
