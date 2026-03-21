@@ -73,6 +73,7 @@ app.add_middleware(
     allow_origins=origins,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Session-ID"]
 )
 
 

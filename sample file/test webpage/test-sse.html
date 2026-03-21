@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -26,6 +25,13 @@ input, textarea {
   background: #f6f6f6;
   white-space: pre-wrap;
 }
+
+#sessionBox {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #eef;
+  border: 1px solid #aac;
+}
 </style>
 </head>
 
@@ -33,8 +39,16 @@ input, textarea {
 
 <h2>SSE Chat Tester</h2>
 
+<!-- Session display -->
+<div id="sessionBox">
+  <strong>Active Session:</strong>
+  <span id="activeSession">None</span>
+  <br><br>
+  <button onclick="clearSession()">Reset Session</button>
+</div>
+
 <div>
-<label>Session ID (optional)</label><br>
+<label>Manual Session ID (optional override)</label><br>
 <input id="sessionId" placeholder="x-session-id">
 </div>
 
@@ -56,6 +70,21 @@ input, textarea {
 
 <script>
 
+let storedSessionId = localStorage.getItem("session_id") || null
+
+function updateSessionUI() {
+  document.getElementById("activeSession").innerText = storedSessionId || "None"
+}
+
+function clearSession() {
+  storedSessionId = null
+  localStorage.removeItem("session_id")
+  updateSessionUI()
+  document.getElementById("log").textContent = "Session cleared.\n"
+}
+
+updateSessionUI()
+
 async function send() {
 
   const log = document.getElementById("log")
@@ -65,7 +94,7 @@ async function send() {
 
   const message = document.getElementById("message").value
   const file = document.getElementById("file").files[0]
-  const sessionId = document.getElementById("sessionId").value
+  const manualSessionId = document.getElementById("sessionId").value
 
   if (message) form.append("message", message)
   if (file) form.append("file", file)
@@ -74,13 +103,29 @@ async function send() {
     "Accept": "text/event-stream"
   }
 
-  if (sessionId) headers["x-session-id"] = sessionId
+  // priority: manual input > stored session
+  const sessionToSend = manualSessionId || storedSessionId
+
+  if (sessionToSend) {
+    headers["X-Session-ID"] = sessionToSend
+  }
 
   const response = await fetch("http://localhost:8000/v1/chat", {
     method: "POST",
     headers: headers,
     body: form
   })
+
+  // read session from response header
+  const returnedSession = response.headers.get("x-session-id")
+
+  if (returnedSession && returnedSession !== storedSessionId) {
+    storedSessionId = returnedSession
+    localStorage.setItem("session_id", storedSessionId)
+    updateSessionUI()
+
+    log.textContent += `[Session Updated] ${storedSessionId}\n\n`
+  }
 
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
@@ -90,7 +135,6 @@ async function send() {
   while (true) {
 
     const { value, done } = await reader.read()
-
     if (done) break
 
     buffer += decoder.decode(value, { stream: true })
@@ -114,17 +158,13 @@ async function send() {
 
         log.scrollTop = log.scrollHeight
       }
-
     }
 
     buffer = parts[parts.length - 1]
-
   }
-
 }
 
 </script>
 
 </body>
 </html>
-```

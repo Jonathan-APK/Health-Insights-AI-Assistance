@@ -9,22 +9,13 @@ uv add <package-name>
 
 ## Run Project Locally
 1) Create a `.env` file (ignored by git) with at least the
-   following keys:
-```env
-   OPENAI_API_KEY=sk-...
-   # optional while developing, the defaults in settings.py are usually
-   # fine but you can override them if you want to test production flags
-   ENV=local
-   REDIS_URL=redis://localhost:6379
-   FRONTEND_ORIGINS=http://localhost:3000
-```
+   following keys as shown in file: `.env.example`
 2) Change directory to `/backend`.
 3) Run using docker compose
 ```bash
    docker compose up --build  # rebuilds image first, picks up code changes
-   docker compose up          # uses old image, code changes not reflected
 ```
-4) Open html 'frontend/test-sse.html' via browser to test server-sent event (SSE) or Swagger UI for non-SSE testing at http://localhost:8000/docs when
+4) Open html `\sample file\test webpage\test-sse.html` via browser to test server-sent event (SSE) or Swagger UI for non-SSE testing at `http://localhost:8000/docs` when
    `ENV` is **not** set to `production`.
 
 ---
@@ -130,7 +121,7 @@ uv run safety check
 
 ---
 
-### Configuration and Deployment Notes
+## Configuration and Deployment Notes
 All runtime settings are driven by environment variables defined in
 `config/settings.py`. For local development you may create a `.env`
 file; be sure **not** to commit it. Use the included

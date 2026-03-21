@@ -45,16 +45,15 @@ async def chat(
     request: Request,
     message: Optional[str] = Form(None, description="User's text message"),
     file: Optional[UploadFile] = File(None, description="Optional file upload"),
-    response: Response = None,
     x_session_id: Optional[str] = Header(None),
 ):
     # Get managers from app state
     session_manager = request.app.state.session_manager
-
+    logger.info(f"Session from header: {x_session_id}")
+    
     # Get session data and set session id in response header
     session_data = await session_manager.get_or_create_session(x_session_id)
     current_session_id = session_data["session_id"]
-    response.headers["X-Session-ID"] = current_session_id
 
     logger.info(f"Session data:\n{json.dumps(session_data, indent=2)}")
 
