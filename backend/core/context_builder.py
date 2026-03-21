@@ -1,22 +1,24 @@
 # Compute relavance by counting overlapped keywords between the query and text
 def filter_relevant_context(chunks, query, top_k=3, min_score=1):
-        scored_chunks = []
+    scored_chunks = []
 
-        for chunk in chunks:
-            relevance_score = keyword_overlap_score(chunk, query)
-            if relevance_score >= min_score:
-                scored_chunks.append((relevance_score, chunk))
-        
-        scored_chunks.sort(reverse=True, key=lambda x: x[0])
+    for chunk in chunks:
+        relevance_score = keyword_overlap_score(chunk, query)
+        if relevance_score >= min_score:
+            scored_chunks.append((relevance_score, chunk))
 
-        return [chunk for _, chunk in scored_chunks[:top_k]]
+    scored_chunks.sort(reverse=True, key=lambda x: x[0])
+
+    return [chunk for _, chunk in scored_chunks[:top_k]]
+
 
 # Select the Top-K most relevant chunks based on keyword overlap with the query
 def keyword_overlap_score(text, query):
-        query_keywords = set(query.lower().split())
-        text_keywords = set(text.lower().split())
-        
-        return len(query_keywords & text_keywords)
+    query_keywords = set(query.lower().split())
+    text_keywords = set(text.lower().split())
+
+    return len(query_keywords & text_keywords)
+
 
 def build_context(state) -> str:
     """
@@ -48,13 +50,14 @@ def build_context(state) -> str:
 
     # 3. Current message (highlighted)
     if getattr(state, "input_text", None):
+        query = state.input_text
         context_parts.append(f'NEW MESSAGE FROM USER:\n  "{state.input_text}"')
-    else: 
-     query = ""
-
-    if query: 
-         filtered_chunks = filter_relevant_context(context_parts, query, top_k=4)
     else:
-         filtered_chunks = context_parts
+        query = ""
+
+    if query:
+        filtered_chunks = filter_relevant_context(context_parts, query, top_k=4)
+    else:
+        filtered_chunks = context_parts
 
     return "\n\n".join(filtered_chunks)

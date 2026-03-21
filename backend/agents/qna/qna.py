@@ -13,7 +13,7 @@ from core.prompt_loader import load_prompt_config
 logger = logging.getLogger("Q&A Agent")
 
 # flow
-# user input -> prompt injection detection -> input sanitization -> update state.user_input-> context building -> llm call -> response
+# user input -> prompt injection detection -> input sanitization -> update state.input_text-> context building -> llm call -> response
 
 
 def now():
@@ -102,7 +102,7 @@ def qna_node(state):
             context += f"\n\nDOCUMENT INSIGHT SUMMARY\n{state.insights_summary}\n\n"
 
         # Check for potential prompt injection
-        user_input = state.user_input
+        user_input = state.input_text
         # detect prompt injection
         if detect_prompt_injection(user_input):
             return {
@@ -117,7 +117,7 @@ def qna_node(state):
         logger.info(f"Sanitized user input for QnA Node: {clean_user_input}...")
 
         # Update state with sanitized input
-        state.user_input = clean_user_input
+        state.input_text = clean_user_input
 
         context += build_context(state)
 
@@ -140,19 +140,21 @@ def qna_node(state):
         # Injects retrived context and user questions into the LLM prompt to enable grounded answering with optional to fallback to general knowledge
         llm = ChatOpenAI(model=model, temperature=temperature)
         result = llm.invoke(
-            [SystemMessage(content=system_prompt), HumanMessage(
-                content=f"""
+            [
+                SystemMessage(content=system_prompt),
+                HumanMessage(
+                    content=f"""
                 CONTEXT STRENGTH: {context_strength}
-                
                 CONTEXT:
                 {context if context else "No relevant context available."}
-                If context is strong -> prioritize context in answer. 
+                If context is strong -> prioritize context in answer.
                 If context is weak -> rely more on general knowledge.
-                
                 QUESTION:
                 {clean_user_input}
-                """)]
-                # content=clean_user_input)]
+                """
+                ),
+            ]
+            # content=clean_user_input)]
         ).content.strip()
 
         # Check for potential medical advice in output and modify response if necessary

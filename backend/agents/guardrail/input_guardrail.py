@@ -54,7 +54,7 @@ async def input_guardrail_node(state):
             return {
                 "input_guardrail_passed": False,
                 "input_guardrail_block_reason": "Max uploads per session exceeded.",
-                "final_response": "You have reached the maximum number of file uploads for this session.",
+                "final_response": "You have reached the maximum number of file uploads for this session. You can still ask questions based on the documents already uploaded, or start a new session to upload more files.",
                 "next_node": "END",
                 "last_updated": now(),
                 "file": None,
