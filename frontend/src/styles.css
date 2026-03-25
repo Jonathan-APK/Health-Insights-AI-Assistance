@@ -46,6 +46,7 @@ body {
   background: #2a9d8f;
   color: white;
   margin-left: auto;
+  text-align: left;
 }
 
 .message.assistant {
@@ -56,14 +57,19 @@ body {
 
 .chat-input {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  max-width: 900px;
+  margin: auto;
+  width: 100%;
   padding: 14px;
   background: #f7f7f8;
   border-top: 1px solid #e5e5e5;
 }
 
 .chat-input input {
-  width: 640px;
+  flex: 1;
+  min-width: 0;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid #d9d9e3;
@@ -83,4 +89,112 @@ body {
 
 .chat-input button:hover {
   background: #0d8a6b;
+}
+
+/* 📎 Modern icon button */
+.upload-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #d9d9e3;
+  background: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.upload-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.thinking {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.retry-btn {
+  margin-top: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: none;
+  border-radius: 6px;
+  background: #f59e0b;
+  color: white;
+  cursor: pointer;
+}
+
+.file-preview {
+  position: absolute;
+  bottom: 70px;
+  left: 20px;
+  background: #e0f2fe;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid #bae6fd;
+}
+
+.input-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  width: fit-content;
+  margin-bottom: 6px;
+}
+
+.remove-file {
+  cursor: pointer;
+  font-weight: bold;
+  color: #64748b;
+}
+
+.remove-file:hover {
+  color: #ef4444;
+}
+
+.file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.file-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.file-bubble {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.message.user .file-bubble {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.message-text {
+  margin-top: 6px;
+  line-height: 1.5;
+  word-break: break-word;
 }
