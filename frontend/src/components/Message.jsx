@@ -3,7 +3,7 @@ export default function Message({ message, onRetry, index, retryingIndex }) {
   const isRetrying = retryingIndex === index;
 
   return (
-    <div className={`message ${message.role}`}>
+    <div className={`message ${message.role}${message.error ? " error" : ""}`}>
 
       {isRetrying ? (
         "Retrying response..."
