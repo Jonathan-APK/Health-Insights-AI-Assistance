@@ -28,6 +28,9 @@ class State(BaseModel):
     # Input Guardrail
     input_guardrail_passed: Optional[bool] = None
     input_guardrail_block_reason: Optional[str] = None
+    limit_reached: Optional[bool] = (
+        False  # Flag to indicate if user has reached the limit
+    )
 
     # Document processing outputs
     parsed_text: Optional[str] = None  # before PII removal

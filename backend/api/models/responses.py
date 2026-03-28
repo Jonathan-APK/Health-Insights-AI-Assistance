@@ -5,14 +5,14 @@ class ChatResponse(BaseModel):
     """Response model for chat endpoint"""
 
     message: str = Field(..., description="Assistant's response")
-    has_active_analysis: bool = Field(
-        ..., description="Whether user has uploaded and analyzed a document"
+    limit_reached: bool = Field(
+        ..., description="Whether user has reached the limit for the session"
     )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "message": "Diabetes is a chronic condition...",
-                "has_active_analysis": False,
+                "limit_reached": False,
             }
         }

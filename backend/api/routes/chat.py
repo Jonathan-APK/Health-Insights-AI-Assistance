@@ -133,7 +133,6 @@ async def chat(
                 "risk_assessment": final_state.get("risk_assessment", ""),
             }
             session_data["analysis"].append(analysis_entry)
-            session_data["has_active_analysis"] = True
 
         session_data["conversation_history"].append(
             {
@@ -163,7 +162,7 @@ async def chat(
             {
                 "type": "complete",
                 "message": message_text,
-                "has_active_analysis": bool(session_data["analysis"]),
+                "limit_reached": final_state.get("limit_reached", False),
             }
         )
 
