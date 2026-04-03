@@ -5,7 +5,7 @@ services:
     image: redis:latest        # uses your existing local redis image
     container_name: redis-server
     ports:
-      - "6379:6379"            # expose to host for local dev access
+      - "7001:6379"            # expose to host for local dev access
     volumes:
       - redis_data:/data       # persist session data across restarts
     healthcheck:
