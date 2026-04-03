@@ -1,0 +1,9 @@
+version: "1.1"
+created_at: "2026-04-03"
+module: "qna"
+description: "Q&A agent prompts for health questions with enhanced few-shot examples"
+
+qna:
+  description: "Provide clear, simple explanations to health-related questions, using available context and previous conversation"
+  model: "gpt-4o-mini"
+  temperature: 0.2

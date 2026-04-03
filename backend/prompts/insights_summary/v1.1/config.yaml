@@ -1,0 +1,9 @@
+version: "1.1"
+created_at: "2026-04-03"
+module: "insights_summary"
+description: "Insights summary agent with enhanced few-shot examples"
+
+summarize:
+  description: "Generate clear, simple summaries of health insights explaining key findings in plain language"
+  model: "gpt-4o-mini"
+  temperature: 0.2

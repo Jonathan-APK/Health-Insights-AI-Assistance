@@ -1,0 +1,14 @@
+version: "1.1"
+created_at: "2026-04-03"
+module: "orchestrator"
+description: "Orchestrator node prompts for routing medical vs off-topic messages with enhanced examples"
+
+classification:
+  description: "Classifies user input as medical or off-topic with specific context"
+  model: "gpt-4o-mini"
+  temperature: 0
+
+off_topic_response:
+  description: "Generates contextual, friendly response for off-topic messages"
+  model: "gpt-4o-mini"
+  temperature: 0.7

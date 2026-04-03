@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Literal
 
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -43,7 +44,7 @@ class Settings(BaseSettings):
     PROMPT_VERSIONS: Dict[str, str] = {
         "input_guardrail": "v1.0",
         "orchestrator": "v1.0",
-        "clinical_analysis": "v1.0",
+        "clinical_analysis": "v1.1",
         "risk_assessment": "v1.0",
         "qna": "v1.0",
         "compliance": "v1.0",
@@ -53,9 +54,10 @@ class Settings(BaseSettings):
     # Default version if module not in PROMPT_VERSIONS
     DEFAULT_PROMPT_VERSION: str = "v1.0"
 
-    class Config:  # configuration for pydantic-settings
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
 
     # Rate limit constants
     MAX_MESSAGES_PER_SESSION: int = 50  # max messages per session lifetime
