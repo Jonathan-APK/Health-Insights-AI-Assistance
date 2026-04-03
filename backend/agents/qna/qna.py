@@ -1,16 +1,28 @@
 import logging
 import re
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from langfuse import observe, get_client, Langfuse
+from dotenv import load_dotenv
 
 from config.settings import settings
 from core.context_builder import build_context
 from core.prompt_loader import load_prompt_config
 
+load_dotenv()
+
 logger = logging.getLogger("Q&A Agent")
+
+langfusePrompt = Langfuse(
+    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    host=os.getenv("LANGFUSE_BASE_URL")
+)
+langfuse = get_client()
 
 # flow
 # user input -> prompt injection detection -> input sanitization -> update state.input_text-> context building -> llm call -> response
@@ -81,7 +93,7 @@ def detect_medical_output_risk(output: str) -> bool:
 
     return False
 
-
+@observe(as_type="generation")
 def qna_node(state):
     """
     Health and Medical Q&A Assistant
@@ -139,7 +151,7 @@ def qna_node(state):
         # Call LLM with config from prompts.json
         # Injects retrived context and user questions into the LLM prompt to enable grounded answering with optional to fallback to general knowledge
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = llm.invoke(
+        response = llm.invoke(
             [
                 SystemMessage(content=system_prompt),
                 HumanMessage(
@@ -155,7 +167,15 @@ def qna_node(state):
                 ),
             ]
             # content=clean_user_input)]
-        ).content.strip()
+        )
+
+        # Update langfuse monitoring w/o prompt management
+        langfuse.update_current_generation(
+            usage_details=response.response_metadata.get("token_usage"),
+            model=response.response_metadata.get("model_name")
+        )
+
+        result = response.content.strip()
 
         # Check for potential medical advice in output and modify response if necessary
         if detect_medical_output_risk(result):

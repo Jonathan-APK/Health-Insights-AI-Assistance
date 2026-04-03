@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------
     OPENAI_API_KEY: str
 
-    REDIS_URL: str = "redis://localhost:7001"
+    REDIS_URL: str = "redis://localhost:6379"
     SESSION_TTL_SECONDS: int = 1_800  # default 30 minutes for Redis sessions
 
     FRONTEND_ORIGINS: List[str] = ["http://localhost:3000"]

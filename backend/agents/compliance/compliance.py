@@ -1,15 +1,27 @@
 import json
 import logging
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from langfuse import observe, get_client, Langfuse
+from dotenv import load_dotenv
 
 from config.settings import settings
 from core.prompt_loader import load_prompt_config
 
+load_dotenv()
+
 logger = logging.getLogger("compliance")
+
+langfusePrompt = Langfuse(
+    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    host=os.getenv("LANGFUSE_BASE_URL")
+)
+langfuse = get_client()
 
 BLOCK_FALLBACK_MESSAGE = "This output has been blocked due to compliance violations. Please contact your administrator."
 ERROR_FALLBACK_MESSAGE = "An error has occurred. Please try again later."
@@ -18,7 +30,7 @@ ERROR_FALLBACK_MESSAGE = "An error has occurred. Please try again later."
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
 
-
+@observe(as_type="generation")
 def compliance_node(state):
     """
     Generate insight summary from report text using LLM.
@@ -46,12 +58,20 @@ def compliance_node(state):
 
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = llm.invoke(
+        response = llm.invoke(
             [
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=state.pre_compliance_response),
             ]
-        ).content.strip()
+        )
+
+        # Update langfuse monitoring w/o prompt management
+        langfuse.update_current_generation(
+            usage_details=response.response_metadata.get("token_usage"),
+            model=response.response_metadata.get("model_name")
+        )
+
+        result = response.content.strip()
 
         # Parse JSON response from LLM
         # Strip markdown code fences if present

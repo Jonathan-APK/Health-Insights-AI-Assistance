@@ -1,20 +1,32 @@
 import logging
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from langfuse import observe, get_client, Langfuse
+from dotenv import load_dotenv
 
 from config.settings import settings
 from core.prompt_loader import load_prompt_config
 
+load_dotenv()
+
 logger = logging.getLogger("clinical_analysis")
+
+langfusePrompt = Langfuse(
+    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    host=os.getenv("LANGFUSE_BASE_URL")
+)
+langfuse = get_client()
 
 
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
 
-
+@observe(as_type="generation")
 def clinical_analysis_node(state):
     """
     Send report text to LLM for clinical analysis.
@@ -35,16 +47,22 @@ def clinical_analysis_node(state):
 
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = (
+        response = (
             llm.invoke(
                 [
                     SystemMessage(content=system_prompt),
                     HumanMessage(content=state.sanitized_text),
                 ]
             )
-            .content.strip()
-            .upper()
         )
+
+        # Update langfuse monitoring w/o prompt management
+        langfuse.update_current_generation(
+            usage_details=response.response_metadata.get("token_usage"),
+            model=response.response_metadata.get("model_name")
+        )
+
+        result = response.content.strip().upper()
 
         if result == "OFF_TOPIC" and state.input_text:
             logger.info(

@@ -5,9 +5,7 @@ from zoneinfo import ZoneInfo
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langfuse import observe
-from langfuse import get_client
-from langfuse import Langfuse
+from langfuse import observe, get_client, Langfuse
 from dotenv import load_dotenv
 
 from config.settings import settings
@@ -16,6 +14,7 @@ from core.prompt_loader import load_prompt_config
 load_dotenv()
 
 logger = logging.getLogger("insights_summary")
+
 langfusePrompt = Langfuse(
     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),

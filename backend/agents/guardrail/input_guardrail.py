@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import os
 from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -8,12 +9,23 @@ from zoneinfo import ZoneInfo
 from fastapi import HTTPException, UploadFile
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from langfuse import observe, get_client, Langfuse
+from dotenv import load_dotenv
 
 from config.settings import settings
 from core.file_validators import FileValidator
 from core.prompt_loader import load_prompt_config
 
+load_dotenv()
+
 logger = logging.getLogger("input_guardrail")
+
+langfusePrompt = Langfuse(
+    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    host=os.getenv("LANGFUSE_BASE_URL")
+)
+langfuse = get_client()
 
 ERROR_FALLBACK_MESSAGE = "An error has occurred. Please try again later."
 
@@ -21,7 +33,7 @@ ERROR_FALLBACK_MESSAGE = "An error has occurred. Please try again later."
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
 
-
+@observe(as_type="generation")
 async def input_guardrail_node(state):
     """
     This is the input guardrail.
@@ -166,12 +178,20 @@ async def input_guardrail_node(state):
 
             # Call LLM for classification with config from prompts.json
             llm = ChatOpenAI(model=model, temperature=temperature)
-            result = llm.invoke(
+            response = llm.invoke(
                 [
                     SystemMessage(content=system_prompt),
                     HumanMessage(content=state.input_text),
                 ]
-            ).content.strip()
+            )
+
+            # Update langfuse monitoring w/o prompt management
+            langfuse.update_current_generation(
+                usage_details=response.response_metadata.get("token_usage"),
+                model=response.response_metadata.get("model_name")
+            )
+
+            result = response.content.strip()
 
             logger.info("input_guardrail classification result: %s", result)
 
