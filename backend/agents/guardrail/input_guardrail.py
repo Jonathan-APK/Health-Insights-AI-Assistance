@@ -47,6 +47,7 @@ async def input_guardrail_node(state):
                 "next_node": "END",
                 "last_updated": now(),
                 "file": None,
+                "limit_reached": True,
             }
 
         # Check max uploads per session
@@ -59,6 +60,7 @@ async def input_guardrail_node(state):
                 "last_updated": now(),
                 "file": None,
                 "session_data": None,
+                "limit_reached": True,
             }
 
         # 3. File validation

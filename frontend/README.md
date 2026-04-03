@@ -54,5 +54,4 @@ The frontend is built using:
 
 - React
 - Vite
-- Axios
 

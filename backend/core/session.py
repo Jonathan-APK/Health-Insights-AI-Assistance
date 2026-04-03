@@ -30,7 +30,7 @@ class SessionManager:
             "conversation_history": [],
             "analysis": [],
             "upload_history": [],
-            "has_active_analysis": False,
+            "limit_reached": False,
             "message_count": 0,
             "upload_count": 0,
         }
