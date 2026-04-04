@@ -62,9 +62,9 @@ class Settings(BaseSettings):
     MAX_UPLOADS_PER_SESSION: int = 3  # max file uploads per session lifetime
 
     # Langfuse configuration
-    LANGFUSE_SECRET_KEY: str
-    LANGFUSE_PUBLIC_KEY: str
-    LANGFUSE_BASE_URL: str
+    LANGFUSE_SECRET_KEY: str = "dummy-key-for-testing"
+    LANGFUSE_PUBLIC_KEY: str = "dummy-key-for-testing"
+    LANGFUSE_BASE_URL: str = "http://localhost:3000"
 
 
 settings = Settings()
