@@ -1,16 +1,16 @@
 import json
 import logging
-import re
 import os
+import re
 from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from dotenv import load_dotenv
 from fastapi import HTTPException, UploadFile
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langfuse import observe, get_client, Langfuse
-from dotenv import load_dotenv
+from langfuse import Langfuse, get_client, observe, propagate_attributes
 
 from config.settings import settings
 from core.file_validators import FileValidator
@@ -23,7 +23,7 @@ logger = logging.getLogger("input_guardrail")
 langfusePrompt = Langfuse(
     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-    host=os.getenv("LANGFUSE_BASE_URL")
+    host=os.getenv("LANGFUSE_BASE_URL"),
 )
 langfuse = get_client()
 
@@ -32,6 +32,7 @@ ERROR_FALLBACK_MESSAGE = "An error has occurred. Please try again later."
 
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
+
 
 @observe(as_type="generation")
 async def input_guardrail_node(state):
@@ -172,9 +173,25 @@ async def input_guardrail_node(state):
                 module="input_guardrail", key="classification", version=version
             )
 
-            system_prompt = classification_config["system"]
-            model = classification_config["model"]
-            temperature = classification_config["temperature"]
+            # langfuse prompt managment (START)
+            try:
+                prompt = langfusePrompt.get_prompt("input_guardrail/systemPrompt")
+                system_prompt = prompt.compile()
+                config = prompt.config
+                model = config.get("model", "gpt-4o-mini")
+                temperature = config.get("temperature", 0)
+                logger.info(
+                    f"Langfuse prompt fetched successfully: version {prompt.version}"
+                )
+            except Exception:
+                # fallback to local prompt config if langfuse prompt retrieval fails
+                logger.info(
+                    "Failed to load system prompt from Langfuse, falling back to local prompt config."
+                )
+                system_prompt = classification_config["system"]
+                model = classification_config["model"]
+                temperature = classification_config["temperature"]
+            # langfuse prompt managment (END)
 
             # Call LLM for classification with config from prompts.json
             llm = ChatOpenAI(model=model, temperature=temperature)
@@ -188,8 +205,16 @@ async def input_guardrail_node(state):
             # Update langfuse monitoring w/o prompt management
             langfuse.update_current_generation(
                 usage_details=response.response_metadata.get("token_usage"),
-                model=response.response_metadata.get("model_name")
+                model=response.response_metadata.get("model_name"),
             )
+
+            # Add langfuse session tracking
+            with propagate_attributes(
+                session_id=state.session_id,
+                user_id=state.session_id,
+                trace_name="input_guardrail",
+            ):
+                pass
 
             result = response.content.strip()
 

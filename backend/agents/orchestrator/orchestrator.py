@@ -3,10 +3,10 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langfuse import observe, get_client, Langfuse
-from dotenv import load_dotenv
+from langfuse import Langfuse, get_client, observe, propagate_attributes
 
 from config.settings import settings
 from core.context_builder import build_context
@@ -19,14 +19,16 @@ logger = logging.getLogger("orchestrator")
 langfusePrompt = Langfuse(
     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-    host=os.getenv("LANGFUSE_BASE_URL")
+    host=os.getenv("LANGFUSE_BASE_URL"),
 )
 langfuse = get_client()
+
 
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
 
-@observe(as_type="generation")
+
+@observe(as_type="span")
 def orchestrator_node(state):
     """
     This is the routing brain.
@@ -51,9 +53,27 @@ def orchestrator_node(state):
             module="orchestrator", key="classification", version=version
         )
 
-        system_prompt = classification_config["system"]
-        model = classification_config["model"]
-        temperature = classification_config["temperature"]
+        # langfuse prompt managment (START)
+        try:
+            classification_prompt = langfusePrompt.get_prompt(
+                "orchestrator/classificationSystemPrompt"
+            )
+            system_prompt = classification_prompt.compile()
+            config = classification_prompt.config
+            model = config.get("model", "gpt-4o-mini")
+            temperature = config.get("temperature", 0.2)
+            logger.info(
+                f"Langfuse prompt fetched successfully: version {classification_prompt.version}"
+            )
+        except Exception:
+            # fallback to local prompt config if langfuse prompt retrieval fails
+            logger.info(
+                "Failed to load classification system prompt from Langfuse, falling back to local prompt config."
+            )
+            system_prompt = classification_config["system"]
+            model = classification_config["model"]
+            temperature = classification_config["temperature"]
+        # langfuse prompt managment (END)
 
         context = build_context(state)
 
@@ -61,16 +81,14 @@ def orchestrator_node(state):
 
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
-        response = (
-            llm.invoke(
-                [SystemMessage(content=system_prompt), HumanMessage(content=context)]
-            )
+        response = llm.invoke(
+            [SystemMessage(content=system_prompt), HumanMessage(content=context)]
         )
 
         # Update langfuse monitoring w/o prompt management
         langfuse.update_current_generation(
             usage_details=response.response_metadata.get("token_usage"),
-            model=response.response_metadata.get("model_name")
+            model=response.response_metadata.get("model_name"),
         )
 
         result = response.content.strip().upper()
@@ -83,9 +101,27 @@ def orchestrator_node(state):
                 module="orchestrator", key="off_topic_response", version=version
             )
 
-            response_prompt = response_config["system"]
-            response_model = response_config["model"]
-            response_temperature = response_config["temperature"]
+            # langfuse prompt managment (START)
+            try:
+                off_topic_prompt = langfusePrompt.get_prompt(
+                    "orchestrator/offTopicSystemPrompt"
+                )
+                response_prompt = off_topic_prompt.compile()
+                config = off_topic_prompt.config
+                response_model = config.get("model", "gpt-4o-mini")
+                response_temperature = config.get("temperature", 0.7)
+                logger.info(
+                    f"Langfuse prompt fetched successfully: version {off_topic_prompt.version}"
+                )
+            except Exception:
+                # fallback to local prompt config if langfuse prompt retrieval fails
+                logger.info(
+                    "Failed to load off topic system prompt from Langfuse, falling back to local prompt config."
+                )
+                response_prompt = response_config["system"]
+                response_model = response_config["model"]
+                response_temperature = response_config["temperature"]
+            # langfuse prompt managment (END)
 
             llm_response = ChatOpenAI(
                 model=response_model, temperature=response_temperature
@@ -99,8 +135,8 @@ def orchestrator_node(state):
 
             # Update langfuse monitoring w/o prompt management
             langfuse.update_current_generation(
-                usage_details=response.response_metadata.get("token_usage"),
-                model=response.response_metadata.get("model_name")
+                usage_details=contextual_result.response_metadata.get("token_usage"),
+                model=contextual_result.response_metadata.get("model_name"),
             )
 
             contextual_response = contextual_result.content.strip()
@@ -113,6 +149,14 @@ def orchestrator_node(state):
                 "next_node": "compliance",
                 "last_updated": now(),
             }
+
+        # Add langfuse session tracking
+        with propagate_attributes(
+            session_id=state.session_id,
+            user_id=state.session_id,
+            trace_name="orchestrator",
+        ):
+            pass
 
         # Medical = route to QnA
         print("=" * 50 + "\n")

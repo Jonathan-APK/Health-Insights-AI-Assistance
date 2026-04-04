@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from langfuse import observe, propagate_attributes
 from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
@@ -35,88 +36,95 @@ def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
 
 
+@observe()
 def pii_removal_node(state):
     """
     Remove PII from parsed text
     """
 
-    try:
-        text_input = state.parsed_text
+    # Add langfuse session tracking
+    with propagate_attributes(
+        session_id=state.session_id,
+        user_id=state.session_id,
+        trace_name="pii_removal",
+    ):
+        try:
+            text_input = state.parsed_text
 
-        # Restrict analyzer to only the PHI entities we care about
-        target_entities = [
-            "PERSON",  # names
-            "PHONE_NUMBER",  # phone
-            "EMAIL_ADDRESS",  # email
-            "LOCATION",  # address
-            "NRIC_FIN",  # custom
-        ]
+            # Restrict analyzer to only the PHI entities we care about
+            target_entities = [
+                "PERSON",  # names
+                "PHONE_NUMBER",  # phone
+                "EMAIL_ADDRESS",  # email
+                "LOCATION",  # address
+                "NRIC_FIN",  # custom
+            ]
 
-        config_operators = {}
+            config_operators = {}
 
-        # call presidio analyzer to detect PII >> returns a list of objects
-        results = analyzer.analyze(
-            text=text_input, language="en", entities=target_entities
-        )
+            # call presidio analyzer to detect PII >> returns a list of objects
+            results = analyzer.analyze(
+                text=text_input, language="en", entities=target_entities
+            )
 
-        # initialize new and empty PII-Value mapping and count the number of PIIs
-        pii_map = {}
-        counter = 1
+            # initialize new and empty PII-Value mapping and count the number of PIIs
+            pii_map = {}
+            counter = 1
 
-        for result in results:
-            value = text_input[result.start : result.end]
-            entity_type = result.entity_type
+            for result in results:
+                value = text_input[result.start : result.end]
+                entity_type = result.entity_type
 
-            # Avoid assigning a new placeholder if the same raw value appears twice
-            if value not in pii_map:
-                pii_map[value] = f"[{entity_type}_{counter}]"
-                counter += 1
+                # Avoid assigning a new placeholder if the same raw value appears twice
+                if value not in pii_map:
+                    pii_map[value] = f"[{entity_type}_{counter}]"
+                    counter += 1
 
-        # Build one custom operator per entity type.
-        # The lambda looks up each individual value in pii_map so that
-        # different names of the same entity type get different placeholders.
-        snapshot = dict(pii_map)  # stable capture for the lambda
+            # Build one custom operator per entity type.
+            # The lambda looks up each individual value in pii_map so that
+            # different names of the same entity type get different placeholders.
+            snapshot = dict(pii_map)  # stable capture for the lambda
 
-        def make_replacer(lookup: dict):
-            def replacer(text: str) -> str:
-                return lookup.get(text, text)
+            def make_replacer(lookup: dict):
+                def replacer(text: str) -> str:
+                    return lookup.get(text, text)
 
-            return replacer
+                return replacer
 
-        config_operators = {
-            entity: OperatorConfig("custom", {"lambda": make_replacer(snapshot)})
-            for entity in {r.entity_type for r in results}
-        }
+            config_operators = {
+                entity: OperatorConfig("custom", {"lambda": make_replacer(snapshot)})
+                for entity in {r.entity_type for r in results}
+            }
 
-        # running the presidio anonymizer once all operators are configured
-        anonymized_result = anonymizer.anonymize(
-            text=text_input, analyzer_results=results, operators=config_operators
-        )
+            # running the presidio anonymizer once all operators are configured
+            anonymized_result = anonymizer.anonymize(
+                text=text_input, analyzer_results=results, operators=config_operators
+            )
 
-        # anonymizer returns an AnonymizedResult object; extract the text field
-        sanitized = (
-            anonymized_result.text
-            if hasattr(anonymized_result, "text")
-            else str(anonymized_result)
-        )
+            # anonymizer returns an AnonymizedResult object; extract the text field
+            sanitized = (
+                anonymized_result.text
+                if hasattr(anonymized_result, "text")
+                else str(anonymized_result)
+            )
 
-        logger.info(
-            f"Sanitized Content: {sanitized[:200]}..."
-        )  # Log first 200 chars of sanitized text
+            logger.info(
+                f"Sanitized Content: {sanitized[:200]}..."
+            )  # Log first 200 chars of sanitized text
 
-        return {
-            "sanitized_text": sanitized,
-            "next_node": "clinical_analysis",
-            "last_updated": now(),
-        }
+            return {
+                "sanitized_text": sanitized,
+                "next_node": "clinical_analysis",
+                "last_updated": now(),
+            }
 
-    except Exception as e:
-        msg = str(e)
-        short_msg = msg[:100] if len(msg) > 100 else msg
-        logger.error(f"Error Encountered: {short_msg}")
-        return {
-            "sanitized_text": "An error occurred while processing the document.",
-            "next_node": "compliance",
-            "final_response": "An error has occurred. Please try again later.",
-            "last_updated": now(),
-        }
+        except Exception as e:
+            msg = str(e)
+            short_msg = msg[:100] if len(msg) > 100 else msg
+            logger.error(f"Error Encountered: {short_msg}")
+            return {
+                "sanitized_text": "An error occurred while processing the document.",
+                "next_node": "compliance",
+                "final_response": "An error has occurred. Please try again later.",
+                "last_updated": now(),
+            }
