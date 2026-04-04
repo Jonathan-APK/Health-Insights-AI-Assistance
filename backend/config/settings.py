@@ -61,5 +61,10 @@ class Settings(BaseSettings):
     MAX_MESSAGES_PER_SESSION: int = 50  # max messages per session lifetime
     MAX_UPLOADS_PER_SESSION: int = 3  # max file uploads per session lifetime
 
+    # Langfuse configuration
+    LANGFUSE_SECRET_KEY: str
+    LANGFUSE_PUBLIC_KEY: str
+    LANGFUSE_BASE_URL: str
+
 
 settings = Settings()

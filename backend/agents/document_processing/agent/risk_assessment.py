@@ -1,5 +1,4 @@
 import logging
-import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -16,9 +15,9 @@ load_dotenv()
 logger = logging.getLogger("risk_assessment")
 
 langfusePrompt = Langfuse(
-    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-    host=os.getenv("LANGFUSE_BASE_URL"),
+    public_key=settings.LANGFUSE_PUBLIC_KEY,
+    secret_key=settings.LANGFUSE_SECRET_KEY,
+    host=settings.LANGFUSE_BASE_URL,
 )
 langfuse = get_client()
 
