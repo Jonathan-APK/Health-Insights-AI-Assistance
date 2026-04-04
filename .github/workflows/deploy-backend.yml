@@ -109,6 +109,9 @@ jobs:
           ENV: test
           REDIS_URL: redis://localhost:6379
           OPENAI_API_KEY: dummy-key-for-testing
+          LANGFUSE_SECRET_KEY: dummy-lang
+          LANGFUSE_PUBLIC_KEY: dummy-key-for-testing
+          LANGFUSE_BASE_URL: dummy-base-url
         #  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_TEST }}
 
       - name: Upload coverage report
