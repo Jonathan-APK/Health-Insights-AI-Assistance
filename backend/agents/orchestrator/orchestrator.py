@@ -141,7 +141,9 @@ def orchestrator_node(state):
 
                 # Update langfuse monitoring w/o prompt management
                 langfuse.update_current_generation(
-                    usage_details=contextual_result.response_metadata.get("token_usage"),
+                    usage_details=contextual_result.response_metadata.get(
+                        "token_usage"
+                    ),
                     model=contextual_result.response_metadata.get("model_name"),
                 )
 
