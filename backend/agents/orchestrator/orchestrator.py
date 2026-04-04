@@ -79,7 +79,7 @@ def orchestrator_node(state):
                 system_prompt = classification_config["system"]
                 model = classification_config["model"]
                 temperature = classification_config["temperature"]
-                classification_prompt= None
+                classification_prompt = None
             # langfuse prompt managment (END)
 
             context = build_context(state)
