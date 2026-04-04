@@ -30,6 +30,12 @@ body {
   padding: 20px 10px;
   max-width: 900px;
   margin: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-window::-webkit-scrollbar {
+  display: none;
 }
 
 .message {
