@@ -79,6 +79,7 @@ def orchestrator_node(state):
                 system_prompt = classification_config["system"]
                 model = classification_config["model"]
                 temperature = classification_config["temperature"]
+                classification_prompt= None
             # langfuse prompt managment (END)
 
             context = build_context(state)
@@ -95,6 +96,7 @@ def orchestrator_node(state):
             langfuse.update_current_generation(
                 usage_details=response.response_metadata.get("token_usage"),
                 model=response.response_metadata.get("model_name"),
+                prompt=classification_prompt,
             )
 
             result = response.content.strip().upper()
@@ -127,6 +129,7 @@ def orchestrator_node(state):
                     response_prompt = response_config["system"]
                     response_model = response_config["model"]
                     response_temperature = response_config["temperature"]
+                    off_topic_prompt = None
                 # langfuse prompt managment (END)
 
                 llm_response = ChatOpenAI(
@@ -145,6 +148,7 @@ def orchestrator_node(state):
                         "token_usage"
                     ),
                     model=contextual_result.response_metadata.get("model_name"),
+                    prompt=off_topic_prompt,
                 )
 
                 contextual_response = contextual_result.content.strip()

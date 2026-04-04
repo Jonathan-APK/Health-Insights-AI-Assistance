@@ -190,6 +190,7 @@ async def input_guardrail_node(state):
                 system_prompt = classification_config["system"]
                 model = classification_config["model"]
                 temperature = classification_config["temperature"]
+                prompt = None
             # langfuse prompt managment (END)
 
             # Call LLM for classification with config from prompts.json
@@ -205,6 +206,7 @@ async def input_guardrail_node(state):
             langfuse.update_current_generation(
                 usage_details=response.response_metadata.get("token_usage"),
                 model=response.response_metadata.get("model_name"),
+                prompt=prompt,
             )
 
             # Add langfuse session tracking

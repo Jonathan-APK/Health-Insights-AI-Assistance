@@ -59,6 +59,7 @@ def insights_summary_node(state):
             system_prompt = analysis_config["system"]
             model = analysis_config["model"]
             temperature = analysis_config["temperature"]
+            prompt = None
         # langfuse prompt managment (END)
 
         # Combine both Clinical Analysis and Risk Assessment fields

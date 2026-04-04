@@ -59,6 +59,7 @@ def clinical_analysis_node(state):
             system_prompt = analysis_config["system"]
             model = analysis_config["model"]
             temperature = analysis_config["temperature"]
+            prompt = None
         # langfuse prompt managment (END)
 
         # Call LLM for classification with config from prompts.json
@@ -74,6 +75,7 @@ def clinical_analysis_node(state):
         langfuse.update_current_generation(
             usage_details=response.response_metadata.get("token_usage"),
             model=response.response_metadata.get("model_name"),
+            prompt=prompt,
         )
 
         # Add langfuse session tracking
