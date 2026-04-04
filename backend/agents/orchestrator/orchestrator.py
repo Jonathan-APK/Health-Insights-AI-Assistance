@@ -34,6 +34,7 @@ def orchestrator_node(state):
     It uses an LLM to classify text-only messages as medical or off-topic.
     It returns a dict of updates (LangGraph merges them into State).
     """
+    logger.info(f"Langfuse host: '{settings.LANGFUSE_BASE_URL}'")
 
     # Add langfuse session tracking
     with propagate_attributes(
