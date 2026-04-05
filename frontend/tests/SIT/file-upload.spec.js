@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
-import fs from 'fs';
-import path from 'path';
+
+const pdfFixture = {
+  name: 'test.pdf',
+  mimeType: 'application/pdf',
+  buffer: Buffer.from('%PDF-1.4\n%EOF'),
+};
+
+const healthPdfFixture = {
+  name: 'health.pdf',
+  mimeType: 'application/pdf',
+  buffer: Buffer.from('%PDF-1.4\n%EOF'),
+};
 
 test.describe('Health AI Frontend - File Upload', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,101 +30,39 @@ test.describe('Health AI Frontend - File Upload', () => {
   test('should allow file selection', async ({ page }) => {
     const fileInput = page.locator('input[type="file"]');
 
-    const testFilePath = path.join(__dirname, 'test.pdf');
-    const testContent = Buffer.from('%PDF-1.4\n%EOF');
+    await fileInput.setInputFiles(pdfFixture);
 
-    if (!fs.existsSync(path.join(__dirname))) {
-      fs.mkdirSync(path.join(__dirname), { recursive: true });
-    }
-    fs.writeFileSync(testFilePath, testContent);
-
-    try {
-      await fileInput.setInputFiles(testFilePath);
-
-      const fileCount = await fileInput.locator('~').count().catch(() => 1);
-      expect(fileCount).toBeGreaterThanOrEqual(1);
-    } finally {
-      if (fs.existsSync(testFilePath)) {
-        fs.unlinkSync(testFilePath);
-      }
-    }
+    await expect(page.locator('.file-chip')).toContainText('test.pdf');
   });
 
   test('should show file name after selection', async ({ page }) => {
     const fileInput = page.locator('input[type="file"]');
 
-    const testFilePath = path.join(__dirname, 'test.pdf');
-    const testContent = Buffer.from('%PDF-1.4\n%EOF');
+    await fileInput.setInputFiles(pdfFixture);
 
-    if (!fs.existsSync(path.join(__dirname))) {
-      fs.mkdirSync(path.join(__dirname), { recursive: true });
-    }
-    fs.writeFileSync(testFilePath, testContent);
-
-    try {
-      await fileInput.setInputFiles(testFilePath);
-
-      const hasFileNames = page.locator('text=/test\\.pdf|file/i');
-      const count = await hasFileNames.count().catch(() => 0);
-      expect(count).toBeGreaterThanOrEqual(0);
-    } finally {
-      if (fs.existsSync(testFilePath)) {
-        fs.unlinkSync(testFilePath);
-      }
-    }
+    await expect(page.locator('text=/test\\.pdf/i')).toBeVisible();
   });
 
   test('should send message with file', async ({ page }) => {
     const fileInput = page.locator('input[type="file"]');
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
-    const testFilePath = path.join(__dirname, 'health.pdf');
-    const testContent = Buffer.from('%PDF-1.4\n%EOF');
+    await fileInput.setInputFiles(healthPdfFixture);
+    await input.fill('Analyze this health document');
+    await sendButton.click();
 
-    if (!fs.existsSync(path.join(__dirname))) {
-      fs.mkdirSync(path.join(__dirname), { recursive: true });
-    }
-    fs.writeFileSync(testFilePath, testContent);
-
-    try {
-      await fileInput.setInputFiles(testFilePath);
-      await input.fill('Analyze this health document');
-      await sendButton.click();
-
-      const messages = page.locator('[class*="message"], [class*="Message"]');
-      await expect(messages.first()).toBeVisible({ timeout: 10000 });
-    } finally {
-      if (fs.existsSync(testFilePath)) {
-        fs.unlinkSync(testFilePath);
-      }
-    }
+    await expect(page.locator('text=/health\\.pdf/i')).toBeVisible();
   });
 
   test('should clear file after sending', async ({ page }) => {
     const fileInput = page.locator('input[type="file"]');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
-    const testFilePath = path.join(__dirname, 'test.pdf');
-    const testContent = Buffer.from('%PDF-1.4\n%EOF');
+    await fileInput.setInputFiles(pdfFixture);
+    await expect(page.locator('.file-chip')).toContainText('test.pdf');
+    await sendButton.click();
 
-    if (!fs.existsSync(path.join(__dirname))) {
-      fs.mkdirSync(path.join(__dirname), { recursive: true });
-    }
-    fs.writeFileSync(testFilePath, testContent);
-
-    try {
-      await fileInput.setInputFiles(testFilePath);
-      await sendButton.click();
-
-      await page.waitForTimeout(2000);
-
-      const files = await fileInput.inputValue().catch(() => '');
-      expect(files).toBe('');
-    } finally {
-      if (fs.existsSync(testFilePath)) {
-        fs.unlinkSync(testFilePath);
-      }
-    }
+    await expect(page.locator('.file-chip')).toHaveCount(0, { timeout: 5000 });
   });
 });

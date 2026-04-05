@@ -1,9 +1,5 @@
 from fastapi.testclient import TestClient
 
-import os
-
-os.environ["BACKEND_HEALTH_ONLY_APP"] = "1"
-
 from main import create_app
 
 client = TestClient(create_app(include_chat_routes=False))

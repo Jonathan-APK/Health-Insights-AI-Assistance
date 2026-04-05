@@ -7,7 +7,7 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
   });
 
   test('should send a text message', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
     await input.fill('What is blood pressure?');
@@ -18,7 +18,7 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
   });
 
   test('should display user message in chat', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
     const userMessage = 'What is diabetes?';
@@ -29,7 +29,7 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
   });
 
   test('should display bot response in chat', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
     await input.fill('What is hemoglobin?');
@@ -40,7 +40,7 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
   });
 
   test('should clear input after sending', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
     await input.fill('Test message');
@@ -55,7 +55,7 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
   });
 
   test('should handle multiple messages in sequence', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
     await input.fill('What is hypertension?');
@@ -71,8 +71,11 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
   });
 
   test('should not send empty messages', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
+    const messages = page.locator('[class*="message"]');
+
+    const countBefore = await messages.count();
 
     await input.fill('');
 
@@ -81,14 +84,14 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
       expect(isDisabled).toBe(true);
     } else {
       await sendButton.click();
-      const messages = page.locator('[class*="message"]');
-      const count = await messages.count();
-      expect(count).toBeLessThanOrEqual(1);
+      await page.waitForTimeout(500);
+      const countAfter = await messages.count();
+      expect(countAfter).toBe(countBefore);
     }
   });
 
   test('should handle special characters in messages', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
     const specialMessage = '血壓 @#$%^& What is "blood pressure"?';
@@ -99,7 +102,7 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
   });
 
   test('should handle long messages', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
     const longMessage = 'What is health? '.repeat(20);
@@ -110,7 +113,7 @@ test.describe('Health AI Frontend - Chat Interactions', () => {
   });
 
   test('should maintain conversation history', async ({ page }) => {
-    const input = page.locator('input[type="text"], textarea').first();
+    const input = page.getByPlaceholder('Ask about your lab results...');
     const sendButton = page.locator('button').filter({ hasText: /send|submit|ask/i }).first();
 
     await input.fill('What is BMI?');

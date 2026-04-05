@@ -1,3 +1,5 @@
+# Load application settings early; this reads from the environment (or
+# .env in local development).
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -8,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 
+from api.routes import chat
 from api.routes import health
 from config.settings import settings
 from core.session import SessionManager
@@ -23,29 +26,33 @@ logger = logging.getLogger("main")
 def create_app(include_chat_routes: bool = True) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # Startup
         if not settings.is_production:
             load_dotenv(override=True)
 
         if include_chat_routes:
-            import os
-
-            from api.routes import chat
-
+            # make sure the OpenAI key is available to downstream libraries
             os.environ.setdefault("OPENAI_API_KEY", settings.OPENAI_API_KEY)
 
+            # Create a Redis client using whatever URL the environment provides.
             redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
             app.state.session_manager = SessionManager(
                 redis_client, ttl=settings.SESSION_TTL_SECONDS
             )
 
+            # Build graph once
             app.state.graph = chat.build_graph()
             print(app.state.graph.get_graph().draw_ascii())
 
-        yield
+        yield  # <-- app running after startup
 
+        # Shutdown
         if include_chat_routes:
             await app.state.session_manager.redis.close()
 
+    # Create FastAPI app with production-safe defaults. Swagger/OpenAPI
+    # endpoints and documentation are disabled when ENV=production so the
+    # exposed attack surface is minimal.
     app = FastAPI(
         title="Health Insights AI",
         description="AI-powered medical document analysis and health Q&A",
@@ -56,11 +63,9 @@ def create_app(include_chat_routes: bool = True) -> FastAPI:
         openapi_url=None if settings.is_production else "/openapi.json",
     )
 
-    origins = settings.FRONTEND_ORIGINS
-
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=settings.FRONTEND_ORIGINS,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Session-ID"],
@@ -80,9 +85,8 @@ def create_app(include_chat_routes: bool = True) -> FastAPI:
         tags=["health"],
     )
 
+    # Include chat routes only when full backend behavior is requested.
     if include_chat_routes:
-        from api.routes import chat
-
         app.include_router(
             chat.router,
             prefix="/v1",
@@ -92,7 +96,7 @@ def create_app(include_chat_routes: bool = True) -> FastAPI:
     return app
 
 
-app = create_app(include_chat_routes=os.getenv("BACKEND_HEALTH_ONLY_APP") != "1")
+app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
