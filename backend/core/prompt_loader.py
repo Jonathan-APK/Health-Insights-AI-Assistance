@@ -87,6 +87,6 @@ def load_prompt_config(module: str, key: str, version: str = "v1.0") -> Dict[str
         "config_file": str(config_file),
     }
 
-    logger.info(f"Local prompt: {module}/{key} v{version}")
+    logger.info(f"Local prompt: {module}/{key} version={version}")
 
     return config

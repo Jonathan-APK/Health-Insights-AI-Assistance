@@ -77,3 +77,30 @@ def test_compliance_node_block_safety_net():
 
         assert result["compliance_response"]["verdict"] == "block"
         assert "blocked" in result["final_response"].lower()
+
+
+def test_compliance_node_allows_informational_result_interpretation_with_disclaimer():
+    """Normal report interpretation should not be blocked just for containing lab values."""
+    with patch("agents.compliance.compliance.ChatOpenAI") as mock_chatopenai:
+        mock_instance = mock_chatopenai.return_value
+        mock_instance.invoke.return_value = _mock_llm_response(
+            '{'
+            '"verdict":"block",'
+            '"reasons":["Contains specific health measurements and potential health risks."],'
+            '"disclaimer_injected":false,'
+            '"sanitized_output":null,'
+            '"final_response":"This output has been blocked due to compliance violations. Please ask another question."'
+            '}'
+        )
+
+        state = DummyState(
+            "Your report indicates several important health measurements that suggest potential health risks. "
+            "BMI is 29.7 kg/m2. Blood pressure is 142/90 mmHg. Total cholesterol is 240 mg/dL. "
+            "Fasting glucose is 115 mg/dL and HbA1c is 6.1%. It is important to discuss these results "
+            "with a healthcare provider for further evaluation."
+        )
+        result = compliance_node(state)
+
+        assert result["compliance_response"]["verdict"] == "pass"
+        assert "Disclaimer:" in result["final_response"]
+        assert "healthcare provider" in result["final_response"]
