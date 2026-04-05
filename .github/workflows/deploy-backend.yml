@@ -60,9 +60,9 @@ jobs:
           name: bandit-report
           path: ./backend/bandit-report.json
 
-      - name: Safety dependency scan
+      - name: pip-audit dependency scan
         working-directory: ./backend
-        run: uv run safety check
+        run: uv run pip-audit
         continue-on-error: true
 
   # ── Stage 2: Tests ────────────────────────────────────
