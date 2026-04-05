@@ -6,6 +6,21 @@ class DummyState:
     def __init__(self, text):
         self.final_response = None
         self.pre_compliance_response = text
+        self.session_id = "test-session"
+
+
+def _mock_llm_response(content: str):
+    return type(
+        "obj",
+        (),
+        {
+            "content": content,
+            "response_metadata": {
+                "token_usage": {"prompt_tokens": 1, "completion_tokens": 1},
+                "model_name": "gpt-4o-mini",
+            },
+        },
+    )()
 
 @pytest.mark.parametrize("mock_output,expected_verdict", [
     ('{"verdict":"pass","final_response":"Safe"}', "pass"),
@@ -15,7 +30,7 @@ def test_compliance_node_unit(mock_output, expected_verdict):
     # Patch the ChatOpenAI class so no API key is needed
     with patch("agents.compliance.compliance.ChatOpenAI") as mock_chatopenai:
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {"content": mock_output})()
+        mock_instance.invoke.return_value = _mock_llm_response(mock_output)
 
         state = DummyState("Sample input")
         result = compliance_node(state)
@@ -42,7 +57,7 @@ def test_compliance_node_json_decode_error():
     """Test compliance node handles malformed JSON response."""
     with patch("agents.compliance.compliance.ChatOpenAI") as mock_chatopenai:
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {"content": "Invalid JSON {broken"})()
+        mock_instance.invoke.return_value = _mock_llm_response("Invalid JSON {broken")
 
         state = DummyState("Sample input")
         result = compliance_node(state)
@@ -55,7 +70,7 @@ def test_compliance_node_block_safety_net():
     """Test compliance node applies safety net when block verdict lacks final_response."""
     with patch("agents.compliance.compliance.ChatOpenAI") as mock_chatopenai:
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {"content": '{"verdict":"block"}'})()
+        mock_instance.invoke.return_value = _mock_llm_response('{"verdict":"block"}')
 
         state = DummyState("Sample input")
         result = compliance_node(state)

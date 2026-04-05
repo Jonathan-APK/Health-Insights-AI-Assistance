@@ -3,14 +3,25 @@ import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from langfuse import Langfuse, get_client, observe, propagate_attributes
 
 from config.settings import settings
 from core.context_builder import build_context
 from core.prompt_loader import load_prompt_config
 
+load_dotenv()
+
 logger = logging.getLogger("Q&A Agent")
+
+langfusePrompt = Langfuse(
+    public_key=settings.LANGFUSE_PUBLIC_KEY,
+    secret_key=settings.LANGFUSE_SECRET_KEY,
+    host=settings.LANGFUSE_BASE_URL,
+)
+langfuse = get_client()
 
 # flow
 # user input -> prompt injection detection -> input sanitization -> update state.input_text-> context building -> llm call -> response
@@ -82,6 +93,7 @@ def detect_medical_output_risk(output: str) -> bool:
     return False
 
 
+@observe(as_type="generation")
 def qna_node(state):
     """
     Health and Medical Q&A Assistant
@@ -92,9 +104,26 @@ def qna_node(state):
         version = settings.PROMPT_VERSIONS.get("qna", settings.DEFAULT_PROMPT_VERSION)
         analysis_config = load_prompt_config(module="qna", key="qna", version=version)
 
-        system_prompt = analysis_config["system"]
-        model = analysis_config["model"]
-        temperature = analysis_config["temperature"]
+        # langfuse prompt managment (START)
+        try:
+            prompt = langfusePrompt.get_prompt("qna/systemPrompt")
+            system_prompt = prompt.compile()
+            config = prompt.config
+            model = config.get("model", "gpt-4o-mini")
+            temperature = config.get("temperature", 0.2)
+            logger.info(
+                f"Langfuse prompt fetched successfully: version {prompt.version}"
+            )
+        except Exception:
+            # fallback to local prompt config if langfuse prompt retrieval fails
+            logger.info(
+                "Failed to load system prompt from Langfuse, falling back to local prompt config."
+            )
+            system_prompt = analysis_config["system"]
+            model = analysis_config["model"]
+            temperature = analysis_config["temperature"]
+            prompt = None
+        # langfuse prompt managment (END)
 
         context = ""
 
@@ -139,7 +168,7 @@ def qna_node(state):
         # Call LLM with config from prompts.json
         # Injects retrived context and user questions into the LLM prompt to enable grounded answering with optional to fallback to general knowledge
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = llm.invoke(
+        response = llm.invoke(
             [
                 SystemMessage(content=system_prompt),
                 HumanMessage(
@@ -155,7 +184,24 @@ def qna_node(state):
                 ),
             ]
             # content=clean_user_input)]
-        ).content.strip()
+        )
+
+        # Update langfuse monitoring w/o prompt management
+        langfuse.update_current_generation(
+            usage_details=response.response_metadata.get("token_usage"),
+            model=response.response_metadata.get("model_name"),
+            prompt=prompt,
+        )
+
+        # Add langfuse session tracking
+        with propagate_attributes(
+            session_id=state.session_id,
+            user_id=state.session_id,
+            trace_name="qna",
+        ):
+            pass
+
+        result = response.content.strip()
 
         # Check for potential medical advice in output and modify response if necessary
         if detect_medical_output_risk(result):

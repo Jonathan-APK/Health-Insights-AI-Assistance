@@ -19,6 +19,21 @@ class DummyState:
         self.input_text = input_text
         self.file = file
         self.session_data = session_data or {"message_count": 0, "upload_count": 0}
+        self.session_id = "test-session"
+
+
+def _mock_llm_response(content: str):
+    return type(
+        "obj",
+        (),
+        {
+            "content": content,
+            "response_metadata": {
+                "token_usage": {"prompt_tokens": 1, "completion_tokens": 1},
+                "model_name": "gpt-4o-mini",
+            },
+        },
+    )()
 
 
 def test_input_guardrail_valid_text():
@@ -27,7 +42,7 @@ def test_input_guardrail_valid_text():
          patch("agents.guardrail.input_guardrail.load_prompt_config"):
 
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {"content": '{"verdict": "pass"}'})()
+        mock_instance.invoke.return_value = _mock_llm_response('{"verdict": "pass"}')
 
         state = DummyState(input_text="What is diabetes?")
         result = asyncio.run(input_guardrail_node(state))
@@ -118,9 +133,9 @@ def test_input_guardrail_llm_classification_suspicious():
          patch("agents.guardrail.input_guardrail.load_prompt_config"):
 
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {
-            "content": '{"verdict": "block", "threat_type": "harmful_intent", "reason": "Contains harmful content"}'
-        })()
+        mock_instance.invoke.return_value = _mock_llm_response(
+            '{"verdict": "block", "threat_type": "harmful_intent", "reason": "Contains harmful content"}'
+        )
 
         state = DummyState(input_text="How to cause harm")
         result = asyncio.run(input_guardrail_node(state))
@@ -135,9 +150,9 @@ def test_input_guardrail_llm_classification_pass():
          patch("agents.guardrail.input_guardrail.load_prompt_config"):
 
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {
-            "content": '{"verdict": "pass", "threat_type": "none"}'
-        })()
+        mock_instance.invoke.return_value = _mock_llm_response(
+            '{"verdict": "pass", "threat_type": "none"}'
+        )
 
         state = DummyState(input_text="What is diabetes?")
         result = asyncio.run(input_guardrail_node(state))

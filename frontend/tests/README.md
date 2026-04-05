@@ -1,6 +1,6 @@
 # Playwright E2E Tests
 
-This directory contains end-to-end tests for the Health Insights AI Frontend using Playwright.
+This directory contains browser-driven system and end-to-end tests for the Health Insights AI Frontend using Playwright.
 
 ## Setup
 
@@ -48,7 +48,7 @@ npx playwright test --ui
 ### Run specific test file
 
 ```bash
-npx playwright test tests/chat.spec.js
+npx playwright test tests/SIT/chat.spec.js
 ```
 
 ### Run tests matching a pattern
@@ -65,24 +65,24 @@ npx playwright test --debug
 
 ## Test Structure
 
-### `ui.spec.js`
+### `tests/SIT/ui.spec.js`
 - Basic UI rendering
 - Responsive design (mobile/desktop)
 - Accessibility checks
 
-### `chat.spec.js`
+### `tests/SIT/chat.spec.js`
 - Text message sending
 - Message display
 - Conversation history
 - Input validation
 
-### `file-upload.spec.js`
+### `tests/SIT/file-upload.spec.js`
 - File selection
 - PDF upload
 - File handling
 - Upload with message
 
-### `compliance.spec.js`
+### `tests/SIT/compliance.spec.js`
 - No diagnosis provision
 - Professional consultation encouragement
 - Emergency case redirection (Singapore: 999)
@@ -90,7 +90,7 @@ npx playwright test --debug
 - Safety compliance checks
 - Disclaimer display
 
-### `session.spec.js`
+### `tests/SIT/session.spec.js`
 - Session persistence
 - Conversation history
 - Loading states
@@ -148,13 +148,15 @@ This enables:
 
 ## Medical Safety Notes
 
-These tests ensure:
+These browser SIT tests ensure:
 - 🏥 No unauthorized medical diagnoses
 - 💊 No medication recommendations without caution
 - 🚨 Emergency cases properly redirected
 - 📋 Compliance and disclaimers shown
 - 🔒 Session data properly managed
 - 📱 Cross-browser consistency for accessibility
+
+Backend SIT should remain API-only and live under `backend/tests/SIT/`, while UI-driven workflows belong here under `frontend/tests/SIT/`.
 
 ## References
 

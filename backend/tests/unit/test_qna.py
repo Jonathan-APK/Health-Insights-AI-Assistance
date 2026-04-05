@@ -15,6 +15,21 @@ class DummyState:
         self.context_history = context_history or []
         self.pre_compliance_response = None
         self.insights_summary = ""  # Required by qna_node
+        self.session_id = "test-session"
+
+
+def _mock_llm_response(content: str):
+    return type(
+        "obj",
+        (),
+        {
+            "content": content,
+            "response_metadata": {
+                "token_usage": {"prompt_tokens": 1, "completion_tokens": 1},
+                "model_name": "gpt-4o-mini",
+            },
+        },
+    )()
 
 
 @pytest.mark.parametrize(
@@ -66,9 +81,9 @@ def test_qna_node_success():
          patch("agents.qna.qna.build_context", return_value="Medical context"):
 
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {
-            "content": "Diabetes is a metabolic disorder affecting blood sugar"
-        })()
+        mock_instance.invoke.return_value = _mock_llm_response(
+            "Diabetes is a metabolic disorder affecting blood sugar"
+        )
 
         state = DummyState("What is diabetes?")
         result = qna_node(state)
@@ -103,9 +118,9 @@ def test_qna_node_with_context():
          patch("agents.qna.qna.build_context", return_value="Previous: Diabetes info"):
 
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {
-            "content": "Following up on previous discussion..."
-        })()
+        mock_instance.invoke.return_value = _mock_llm_response(
+            "Following up on previous discussion..."
+        )
 
         state = DummyState("What about treatment?", context_history=["Previous: Diabetes info"])
         result = qna_node(state)

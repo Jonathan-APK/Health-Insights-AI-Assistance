@@ -8,6 +8,7 @@ class DummyState:
     def __init__(self, file_bytes, file_meta=None):
         self.file_bytes = file_bytes
         self.file_meta = file_meta or {}
+        self.session_id = "test-session"
 
 
 @pytest.mark.parametrize(

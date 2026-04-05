@@ -7,6 +7,83 @@ pip install <package-name>
 uv add <package-name>
 ```
 
+## Run Langfuse (self-host with docker) Locally [1/4]
+0) Install git and Docker Desktop
+1) launch Docker Desktop and open its terminal
+2) Get a copy of the latest Langfuse repository:
+```bash
+    git clone https://github.com/langfuse/langfuse.git
+```
+3) Go into that folder and modify `langfuse\docker-compose.yml`
+
+<br/>Before
+```
+    services.redis.ports:
+                      - 127.0.0.1:6379:6379
+```
+<br/>After
+```
+    services.redis.ports:
+                      - 127.0.0.1:6380:6379
+```
+
+4) Go back to Docker Desktop and start the application
+```bash
+    cd langfuse
+    docker compose up
+```
+
+5) Once all the containers are running, open `http://localhost:3000` in your browser
+
+
+## Setup Langfuse (self-host with docker) Locally [2/4]
+0) Ensure your langfuse docker container is running, and open `http://localhost:3000` in your browser
+
+1) Create your account (this account is only tied to the current running langfuse docker) and log in
+
+2) Create "Organization" and "Project" (any naming will do)
+
+3) Go into the created project, scroll through the left side menu and look for "Settings"
+
+4) Click into "Settings", the right panel will be updated. Click into "API Keys"
+
+5) Click the "Create new API keys" button and note down the Public and Secret keys (will be used in the `.env` file based on the updated `.env.example` file)
+
+
+## Setup Prompt Management in Langfuse (self-host with docker) Locally [3/4]
+0) Ensure your langfuse docker container is running, and open `http://localhost:3000` in your browser
+
+1) Log in and go into your working Organization and Project
+
+2) Scroll through the left side menu and look for "Prompts"
+
+3) Click into "Prompts", the right panel will be updated. Click the "New prompt" button
+
+4) Name the prompt as "insights_summary/systemPrompt"
+
+5) In the Prompt section, toggle the setting from 'text' to 'chat' (you will see System role inside the textbox)
+
+6) Copy-paste the entire contents from `backend\prompts\insights_summary\v1.0\summarize.txt`
+
+7) Ensure the checkbox is ticked
+```
+  Set the "production" label
+```
+
+8) Add commit message and then click "Create Prompt" button
+
+## Viewing LLM Tracing in Langfuse (self-host with docker) Locally [4/4]
+0) Ensure your langfuse docker container is running, and open `http://localhost:3000` in your browser
+
+1) Log in and go into your working Organization and Project
+
+2) Scroll through the left side menu and look for "Observability/Tracing"
+
+3) Click "Tracing" and then the right panel will be updated
+
+4) Switch from "Traces" to "Observations" view
+
+
 ## Run Project Locally
 1) Create a `.env` file (ignored by git) with at least the
    following keys as shown in file: `.env.example`
@@ -30,6 +107,22 @@ Make sure you are in the `/backend` directory and dependencies are installed:
 cd backend
 uv sync --frozen --dev
 ```
+
+### Backend SIT Scope
+
+Default backend SIT is API smoke coverage only and does not assume the frontend is running.
+
+```bash
+pytest tests/SIT/test_api.py
+```
+
+Chat route integration coverage is opt-in and should only be run when your integration environment is ready.
+
+```bash
+RUN_BACKEND_CHAT_SIT=1 pytest tests/SIT/test_chat_integration.py
+```
+
+Use the frontend Playwright SIT suite for browser-driven flows once the frontend is up.
 
 ### Ruff — Lint & Format
 

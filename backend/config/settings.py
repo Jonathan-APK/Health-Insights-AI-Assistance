@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Literal
 
-from pydantic import ConfigDict
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -54,7 +53,7 @@ class Settings(BaseSettings):
     # Default version if module not in PROMPT_VERSIONS
     DEFAULT_PROMPT_VERSION: str = "v1.0"
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
     )
@@ -63,5 +62,10 @@ class Settings(BaseSettings):
     MAX_MESSAGES_PER_SESSION: int = 50  # max messages per session lifetime
     MAX_UPLOADS_PER_SESSION: int = 3  # max file uploads per session lifetime
 
+    # Langfuse configuration
+    LANGFUSE_SECRET_KEY: str
+    LANGFUSE_PUBLIC_KEY: str
+    LANGFUSE_BASE_URL: str
 
-settings = Settings()
+
+settings = Settings()  # pyright: ignore[reportCallIssue]

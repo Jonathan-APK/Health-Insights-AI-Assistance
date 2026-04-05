@@ -6,6 +6,7 @@ from agents.document_processing.pii_removal import pii_removal_node
 class DummyState:
     def __init__(self, parsed_text):
         self.parsed_text = parsed_text
+        self.session_id = "test-session"
 
 
 def test_pii_removal_node_success():

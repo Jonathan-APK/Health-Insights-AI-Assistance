@@ -13,6 +13,21 @@ class DummyState:
         self.input_text = input_text
         self.file_meta = file_meta
         self.context_history = []
+        self.session_id = "test-session"
+
+
+def _mock_llm_response(content: str):
+    return type(
+        "obj",
+        (),
+        {
+            "content": content,
+            "response_metadata": {
+                "token_usage": {"prompt_tokens": 1, "completion_tokens": 1},
+                "model_name": "gpt-4o-mini",
+            },
+        },
+    )()
 
 
 @pytest.mark.parametrize(
@@ -28,7 +43,7 @@ def test_orchestrator_text_only_routing(llm_output, input_text, file_meta, expec
          patch("agents.orchestrator.orchestrator.build_context"):
 
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {"content": llm_output})()
+        mock_instance.invoke.return_value = _mock_llm_response(llm_output)
 
         state = DummyState(input_text, file_meta)
         result = orchestrator_node(state)
@@ -43,7 +58,7 @@ def test_orchestrator_text_only_medical():
          patch("agents.orchestrator.orchestrator.build_context"):
 
         mock_instance = mock_chatopenai.return_value
-        mock_instance.invoke.return_value = type("obj", (), {"content": "MEDICAL"})()
+        mock_instance.invoke.return_value = _mock_llm_response("MEDICAL")
 
         state = DummyState(input_text="What are symptoms of hypertension?")
         result = orchestrator_node(state)
@@ -61,8 +76,8 @@ def test_orchestrator_text_only_off_topic():
         # Second call returns off-topic response
         mock_instance = mock_chatopenai.return_value
         mock_instance.invoke.side_effect = [
-            type("obj", (), {"content": "OFF_TOPIC"})(),
-            type("obj", (), {"content": "I can only answer health-related questions"})(),
+            _mock_llm_response("OFF_TOPIC"),
+            _mock_llm_response("I can only answer health-related questions"),
         ]
 
         mock_load.return_value = {

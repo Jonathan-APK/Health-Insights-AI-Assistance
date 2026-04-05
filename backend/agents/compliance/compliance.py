@@ -3,13 +3,24 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from langfuse import Langfuse, get_client, observe, propagate_attributes
 
 from config.settings import settings
 from core.prompt_loader import load_prompt_config
 
+load_dotenv()
+
 logger = logging.getLogger("compliance")
+
+langfusePrompt = Langfuse(
+    public_key=settings.LANGFUSE_PUBLIC_KEY,
+    secret_key=settings.LANGFUSE_SECRET_KEY,
+    host=settings.LANGFUSE_BASE_URL,
+)
+langfuse = get_client()
 
 BLOCK_FALLBACK_MESSAGE = "This output has been blocked due to compliance violations. Please contact your administrator."
 ERROR_FALLBACK_MESSAGE = "An error has occurred. Please try again later."
@@ -19,6 +30,7 @@ def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
 
 
+@observe(as_type="generation")
 def compliance_node(state):
     """
     Generate insight summary from report text using LLM.
@@ -40,18 +52,52 @@ def compliance_node(state):
             module="compliance", key="compliance", version=version
         )
 
-        system_prompt = analysis_config["system"]
-        model = analysis_config["model"]
-        temperature = analysis_config["temperature"]
+        # langfuse prompt managment (START)
+        try:
+            prompt = langfusePrompt.get_prompt("compliance/systemPrompt")
+            system_prompt = prompt.compile()
+            config = prompt.config
+            model = config.get("model", "gpt-4o-mini")
+            temperature = config.get("temperature", 0.2)
+            logger.info(
+                f"Langfuse prompt fetched successfully: version {prompt.version}"
+            )
+        except Exception:
+            # fallback to local prompt config if langfuse prompt retrieval fails
+            logger.info(
+                "Failed to load system prompt from Langfuse, falling back to local prompt config."
+            )
+            system_prompt = analysis_config["system"]
+            model = analysis_config["model"]
+            temperature = analysis_config["temperature"]
+            prompt = None
+        # langfuse prompt managment (END)
 
         # Call LLM for classification with config from prompts.json
         llm = ChatOpenAI(model=model, temperature=temperature)
-        result = llm.invoke(
+        response = llm.invoke(
             [
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=state.pre_compliance_response),
             ]
-        ).content.strip()
+        )
+
+        # Update langfuse monitoring w/o prompt management
+        langfuse.update_current_generation(
+            usage_details=response.response_metadata.get("token_usage"),
+            model=response.response_metadata.get("model_name"),
+            prompt=prompt,
+        )
+
+        # Add langfuse session tracking
+        with propagate_attributes(
+            session_id=state.session_id,
+            user_id=state.session_id,
+            trace_name="compliance",
+        ):
+            pass
+
+        result = response.content.strip()
 
         # Parse JSON response from LLM
         # Strip markdown code fences if present
