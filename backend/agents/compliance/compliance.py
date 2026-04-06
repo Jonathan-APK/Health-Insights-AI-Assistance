@@ -51,7 +51,27 @@ DISALLOWED_CONTENT_PATTERNS = [
     r"harm yourself",
     r"kill yourself",
     r"take\s+\d+\s*mg",
-    r"you have\s+[a-z]",
+]
+
+CRITICAL_BLOCK_REASON_PATTERNS = [
+    r"pii",
+    r"personally identifiable",
+    r"name",
+    r"nric",
+    r"fin",
+    r"phone",
+    r"email",
+    r"address",
+    r"dosage",
+    r"treatment plan",
+    r"specific doctor",
+    r"specific clinic",
+    r"harmful",
+    r"violent",
+    r"sexual",
+    r"discriminatory",
+    r"prompt injection",
+    r"system prompt",
 ]
 
 
@@ -85,10 +105,26 @@ def _looks_like_allowable_health_interpretation(text: str, reasons: list[str]) -
             "potential health risks",
             "lab values",
             "test results",
+            "medical",
+            "diagnosis",
+            "treatment",
         ]
     )
 
     return has_allowed_pattern and not has_disallowed_pattern and false_positive_reason
+
+
+def _contains_clear_block_signal(text: str, reasons: list[str]) -> bool:
+    normalized_text = (text or "").lower()
+    normalized_reasons = " ".join(reasons or []).lower()
+
+    if any(re.search(pattern, normalized_text) for pattern in DISALLOWED_CONTENT_PATTERNS):
+        return True
+
+    return any(
+        re.search(pattern, normalized_reasons)
+        for pattern in CRITICAL_BLOCK_REASON_PATTERNS
+    )
 
 
 @observe(as_type="generation")
@@ -179,6 +215,21 @@ def compliance_node(state):
             compliance_response["verdict"] = verdict
             compliance_response["reasons"] = [
                 "Informational health-result interpretation allowed with disclaimer."
+            ]
+            compliance_response["disclaimer_injected"] = True
+            compliance_response["sanitized_output"] = None
+            compliance_response["final_response"] = final_response
+
+        # If the model blocks a clearly informational health explanation without
+        # any strong unsafe signal, treat it as a false positive and pass with disclaimer.
+        if verdict == "block" and not _contains_clear_block_signal(
+            state.pre_compliance_response, reasons
+        ):
+            verdict = "pass"
+            final_response = _append_disclaimer(state.pre_compliance_response)
+            compliance_response["verdict"] = verdict
+            compliance_response["reasons"] = [
+                "No clear compliance violation detected in informational content."
             ]
             compliance_response["disclaimer_injected"] = True
             compliance_response["sanitized_output"] = None

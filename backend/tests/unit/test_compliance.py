@@ -104,3 +104,50 @@ def test_compliance_node_allows_informational_result_interpretation_with_disclai
         assert result["compliance_response"]["verdict"] == "pass"
         assert "Disclaimer:" in result["final_response"]
         assert "healthcare provider" in result["final_response"]
+
+
+def test_compliance_node_unjustified_block_is_downgraded_to_pass():
+    """A block without any clear unsafe signal should be treated as false positive."""
+    with patch("agents.compliance.compliance.ChatOpenAI") as mock_chatopenai:
+        mock_instance = mock_chatopenai.return_value
+        mock_instance.invoke.return_value = _mock_llm_response(
+            '{'
+            '"verdict":"block",'
+            '"reasons":["Potentially sensitive medical interpretation."],'
+            '"disclaimer_injected":false,'
+            '"sanitized_output":null,'
+            '"final_response":"This output has been blocked due to compliance violations. Please ask another question."'
+            '}'
+        )
+
+        state = DummyState(
+            "Your report shows elevated blood pressure and cholesterol. "
+            "These findings may increase cardiovascular risk and should be discussed with a healthcare professional."
+        )
+        result = compliance_node(state)
+
+        assert result["compliance_response"]["verdict"] == "pass"
+        assert "Disclaimer:" in result["final_response"]
+
+
+def test_compliance_node_keeps_block_for_explicit_pii_reason():
+    """Explicit high-risk reasons like PII leakage must remain blocked."""
+    with patch("agents.compliance.compliance.ChatOpenAI") as mock_chatopenai:
+        mock_instance = mock_chatopenai.return_value
+        mock_instance.invoke.return_value = _mock_llm_response(
+            '{'
+            '"verdict":"block",'
+            '"reasons":["Contains PII including full name and phone number."],'
+            '"disclaimer_injected":false,'
+            '"sanitized_output":null,'
+            '"final_response":"This output has been blocked due to compliance violations. Please ask another question."'
+            '}'
+        )
+
+        state = DummyState(
+            "Patient John Doe can be reached at +65 9123 4567 for follow-up."
+        )
+        result = compliance_node(state)
+
+        assert result["compliance_response"]["verdict"] == "block"
+        assert "blocked" in result["final_response"].lower()
