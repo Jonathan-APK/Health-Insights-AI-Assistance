@@ -10,8 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 
-from api.routes import chat
-from api.routes import health
+from api.routes import chat, health
 from config.settings import settings
 from core.session import SessionManager
 

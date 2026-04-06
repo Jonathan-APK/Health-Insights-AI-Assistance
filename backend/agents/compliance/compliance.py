@@ -72,7 +72,8 @@ def _looks_like_allowable_health_interpretation(text: str, reasons: list[str]) -
     normalized_reasons = " ".join(reasons or []).lower()
 
     has_allowed_pattern = any(
-        re.search(pattern, normalized_text) for pattern in ALLOWABLE_HEALTH_INTERPRETATION_PATTERNS
+        re.search(pattern, normalized_text)
+        for pattern in ALLOWABLE_HEALTH_INTERPRETATION_PATTERNS
     )
     has_disallowed_pattern = any(
         re.search(pattern, normalized_text) for pattern in DISALLOWED_CONTENT_PATTERNS
