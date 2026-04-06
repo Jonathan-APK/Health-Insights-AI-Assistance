@@ -41,13 +41,13 @@ class Settings(BaseSettings):
     # prompt versioning (existing behaviour)
     # ---------------------------------------------------------------
     PROMPT_VERSIONS: Dict[str, str] = {
-        "input_guardrail": "v1.1",
-        "orchestrator": "v1.1",
-        "clinical_analysis": "v1.1",
-        "risk_assessment": "v1.1",
-        "qna": "v1.1",
-        "compliance": "v1.1",
-        "insights_summary": "v1.1",
+        "input_guardrail": "v1.0",
+        "orchestrator": "v1.0",
+        "clinical_analysis": "v1.0",
+        "risk_assessment": "v1.0",
+        "qna": "v1.0",
+        "compliance": "v1.0",
+        "insights_summary": "v1.0",
     }
 
     # Default version if module not in PROMPT_VERSIONS
