@@ -74,6 +74,13 @@ CRITICAL_BLOCK_REASON_PATTERNS = [
     r"system prompt",
 ]
 
+SOFT_FALSE_POSITIVE_REASON_PATTERNS = [
+    r"potentially sensitive medical interpretation",
+    r"sensitive medical interpretation",
+    r"medical interpretation",
+    r"potentially sensitive",
+]
+
 
 def now():
     return datetime.now(ZoneInfo("Asia/Singapore")).isoformat()
@@ -126,6 +133,14 @@ def _contains_clear_block_signal(text: str, reasons: list[str]) -> bool:
     return any(
         re.search(pattern, normalized_reasons)
         for pattern in CRITICAL_BLOCK_REASON_PATTERNS
+    )
+
+
+def _looks_like_soft_false_positive(reasons: list[str]) -> bool:
+    normalized_reasons = " ".join(reasons or []).lower()
+    return any(
+        re.search(pattern, normalized_reasons)
+        for pattern in SOFT_FALSE_POSITIVE_REASON_PATTERNS
     )
 
 
@@ -224,8 +239,13 @@ def compliance_node(state):
 
         # If the model blocks a clearly informational health explanation without
         # any strong unsafe signal, treat it as a false positive and pass with disclaimer.
-        if verdict == "block" and not _contains_clear_block_signal(
-            state.pre_compliance_response, reasons
+        if (
+            verdict == "block"
+            and _looks_like_allowable_health_interpretation(
+                state.pre_compliance_response, reasons
+            )
+            and _looks_like_soft_false_positive(reasons)
+            and not _contains_clear_block_signal(state.pre_compliance_response, reasons)
         ):
             verdict = "pass"
             final_response = _append_disclaimer(state.pre_compliance_response)
