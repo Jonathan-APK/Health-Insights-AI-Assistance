@@ -118,7 +118,9 @@ def _contains_clear_block_signal(text: str, reasons: list[str]) -> bool:
     normalized_text = (text or "").lower()
     normalized_reasons = " ".join(reasons or []).lower()
 
-    if any(re.search(pattern, normalized_text) for pattern in DISALLOWED_CONTENT_PATTERNS):
+    if any(
+        re.search(pattern, normalized_text) for pattern in DISALLOWED_CONTENT_PATTERNS
+    ):
         return True
 
     return any(
