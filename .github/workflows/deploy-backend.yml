@@ -112,6 +112,7 @@ jobs:
           LANGFUSE_SECRET_KEY: dummy-lang
           LANGFUSE_PUBLIC_KEY: dummy-key-for-testing
           LANGFUSE_BASE_URL: dummy-base-url
+          RUN_BACKEND_CHAT_SIT: "1"
         #  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_TEST }}
 
       - name: Upload coverage report
